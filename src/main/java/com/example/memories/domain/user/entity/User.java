@@ -6,9 +6,21 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        uniqueConstraints = @UniqueConstraint(
+                name = "UK_PROVIDER_PROVIDER_ID",
+                columnNames = {"provider", "provider_id"}
+        )
+)
+@SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends AuditingEntity {
@@ -29,6 +41,9 @@ public class User extends AuditingEntity {
 
     @Column(name = "provider_id", nullable = false)
     private String providerId;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Builder
     private User(String name, String email, AuthProvider provider, String providerId) {
