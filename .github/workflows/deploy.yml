@@ -5,6 +5,7 @@ on:
     branches:
     - main
     - develop
+    - 'feat/#6-cicd'
   pull_request:
     branches:
     - main
@@ -24,7 +25,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'temurin'
+          distribution: 'temurin'g
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -46,7 +47,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/feat/#6-cicd'
 
     steps:
       - name: Download artifact
