@@ -5,7 +5,6 @@ on:
     branches:
     - main
     - develop
-    - 'feat/#6-cicd'
   pull_request:
     branches:
     - main
@@ -47,7 +46,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/feat/#6-cicd'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
 
     steps:
       - name: Download artifact
