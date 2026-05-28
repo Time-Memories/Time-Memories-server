@@ -25,6 +25,7 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -133,7 +134,7 @@ jobs:
           
                 # 정리 작업
                 rm /home/${USER}/app.tar
-                docker image prune -f > /dev/null 2>&1
+                docker image prune -a -f --filter "until=24h" > /dev/null 2>&1
           
                 echo "=== 배포 완료 ==="
                 docker ps | grep memories-be
