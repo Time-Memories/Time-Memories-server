@@ -5,7 +5,7 @@ import com.example.memories.domain.user.entity.AuthProvider;
 import com.example.memories.global.exception.BusinessException;
 import com.example.memories.infra.oauth.OAuthClient;
 import com.example.memories.infra.oauth.OAuthUserInfo;
-import tools.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
