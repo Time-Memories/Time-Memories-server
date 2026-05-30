@@ -69,6 +69,9 @@ jobs:
           REDIS_HOST: ${{ secrets.REDIS_HOST }}
           REDIS_PORT: ${{ secrets.REDIS_PORT }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
@@ -85,6 +88,9 @@ jobs:
             DB_USERNAME="${DB_USERNAME}" \
             DB_PASSWORD="${DB_PASSWORD}" \
             REDIS_PASSWORD="${REDIS_PASSWORD}" \
+            AWS_ACCESS_KEY="${AWS_ACCESS_KEY}" \
+            AWS_SECRET_KEY="${AWS_SECRET_KEY}" \
+            JWT_SECRET="${JWT_SECRET}" \
             bash << 'EOF'
             set -e  # 에러 발생 시 즉시 중단
           
@@ -111,6 +117,9 @@ jobs:
               -e REDIS_HOST="memories-redis-prod" \
               -e REDIS_PORT="6379" \
               -e REDIS_PASSWORD="${REDIS_PASSWORD}" \
+              -e AWS_ACCESS_KEY="${AWS_ACCESS_KEY}" \
+              -e AWS_SECRET_KEY="${AWS_SECRET_KEY}" \
+              -e JWT_SECRET="${JWT_SECRET}" \
               memories-be:${IMAGE_TAG}
           
             echo "✅ 컨테이너 시작됨 (ID: $(docker ps -q -f name=memories-be))"
