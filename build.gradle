@@ -52,6 +52,10 @@ dependencies {
 	// CI/CD
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+	// S3
+	implementation platform('software.amazon.awssdk:bom:2.25.0')
+	implementation 'software.amazon.awssdk:s3'
+
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
