@@ -1,5 +1,6 @@
 package com.example.memories.domain.room.entity;
 
+import com.example.memories.domain.room.entity.enums.RoomType;
 import com.example.memories.global.common.entity.CreatedAtEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,7 +14,7 @@ public class Room extends CreatedAtEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String type;
+    private RoomType type;
 
     private String title;
 
@@ -21,13 +22,13 @@ public class Room extends CreatedAtEntity {
     private String roomCode;
 
     @Builder
-    public Room(String type, String title, String roomCode) {
+    public Room(RoomType type, String title, String roomCode) {
         this.type = type;
         this.title = title;
         this.roomCode = roomCode;
     }
 
-    public void update(String title, String type) {
+    public void update(String title, RoomType type) {
         if (title != null) {
             this.title = title;
         }
