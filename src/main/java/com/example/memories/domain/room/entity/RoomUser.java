@@ -1,5 +1,6 @@
 package com.example.memories.domain.room.entity;
 
+import com.example.memories.domain.room.entity.enums.RoomRole;
 import com.example.memories.domain.user.entity.User;
 import com.example.memories.global.common.entity.CreatedAtEntity;
 import jakarta.persistence.*;
