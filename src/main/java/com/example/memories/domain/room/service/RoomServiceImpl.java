@@ -1,0 +1,234 @@
+package com.example.memories.domain.room.service;
+
+import com.example.memories.domain.room.dto.request.RoomCreateRequest;
+import com.example.memories.domain.room.dto.request.RoomJoinRequest;
+import com.example.memories.domain.room.dto.request.RoomUpdateRequest;
+import com.example.memories.domain.room.dto.response.*;
+import com.example.memories.domain.room.entity.Room;
+import com.example.memories.domain.room.entity.RoomUser;
+import com.example.memories.domain.room.entity.enums.RoomRole;
+import com.example.memories.domain.room.entity.enums.RoomType;
+import com.example.memories.domain.room.exception.RoomErrorCode;
+import com.example.memories.domain.room.repository.RoomRepository;
+import com.example.memories.domain.room.repository.RoomUserRepository;
+import com.example.memories.domain.user.entity.User;
+import com.example.memories.global.exception.BusinessException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@Transactional(readOnly = true)
+@RequiredArgsConstructor
+public class RoomServiceImpl implements RoomService {
+
+    private static final int ROOM_CODE_LENGTH = 6;
+
+    private final RoomRepository roomRepository;
+    private final RoomUserRepository roomUserRepository;
+
+    @Transactional
+    @Override
+    public RoomCreateResponse createRoom(User user, RoomCreateRequest request) {
+        // 방 코드 생성
+        String roomCode = generateRoomCode();
+
+        Room room = Room.builder()
+                .title(request.title())
+                .type(request.type())
+                .roomCode(roomCode)
+                .build();
+
+        // Room 저장
+        Room savedRoom = roomRepository.save(room);
+
+        RoomUser roomUser = RoomUser.builder()
+                .room(savedRoom)
+                .user(user)
+                .role(RoomRole.OWNER)
+                .build();
+
+        // RoomUser 저장
+        roomUserRepository.save(roomUser);
+
+        return RoomCreateResponse.from(savedRoom);
+    }
+
+    @Override
+    public RoomListResponse getRooms(User user, Pageable pageable) {
+        Page<RoomUser> roomUsers = roomUserRepository.findAllByUserWithRoom(user, pageable);
+
+        // RoomUser -> RoomDto 변환
+        List<RoomListResponse.RoomDto> rooms = roomUsers.stream()
+                .map(RoomUser::getRoom)
+                .map(RoomListResponse.RoomDto::from)
+                .toList();
+
+        return RoomListResponse.of(
+                rooms,
+                roomUsers.getNumber(),
+                roomUsers.getSize(),
+                roomUsers.hasNext()
+        );
+    }
+
+    @Override
+    public RoomDetailResponse getRoomDetail(User user, Long roomId) {
+        // 요청한 방 조회
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_NOT_FOUND));
+
+        // 현재 유저가 해당 방에 속한 인원인지 검사
+        if (!roomUserRepository.existsByRoomAndUser(room, user)) {
+            throw new BusinessException(RoomErrorCode.ROOM_FORBIDDEN);
+        }
+
+        // 요청한 방의 방장이 있는지 검사 후 정보 가져오기
+        RoomUser ownerRoomUser = roomUserRepository.findByRoomAndRole(room, RoomRole.OWNER)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_OWNER_NOT_FOUND));
+
+        return RoomDetailResponse.of(room, ownerRoomUser.getUser());
+    }
+
+    @Transactional
+    @Override
+    public RoomUpdateResponse updateRoom(User user, Long roomId, RoomUpdateRequest request) {
+        // 수정할 방 조회
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_NOT_FOUND));
+
+        // 현재 유저가 해당 방에 속한 인원인지 검사
+        RoomUser roomUser = roomUserRepository.findByRoomAndUser(room, user)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_FORBIDDEN));
+
+        // 방장만 방 수정 가능
+        if (!roomUser.isOwner()) {
+            throw new BusinessException(RoomErrorCode.ROOM_NOT_OWNER);
+        }
+
+        // 방 수정
+        room.update(request.title());
+
+        // 수정된 방 정보 반환
+        return RoomUpdateResponse.from(room);
+    }
+
+    @Transactional
+    @Override
+    public void deleteRoom(User user, Long roomId) {
+        // 삭제할 방 조회
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_NOT_FOUND));
+
+        // 현재 유저가 해당 방에 속한 인원인지 검사
+        RoomUser roomUser = roomUserRepository.findByRoomAndUser(room, user)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_FORBIDDEN));
+
+        // 방장만 방 삭제 가능
+        if (!roomUser.isOwner()) {
+            throw new BusinessException(RoomErrorCode.ROOM_NOT_OWNER);
+        }
+
+        // 방에 속한 RoomUser 먼저 삭제
+        roomUserRepository.deleteAllByRoom(room);
+
+        // 방 삭제
+        roomRepository.delete(room);
+    }
+
+    @Transactional
+    @Override
+    public RoomJoinResponse joinRoom(User user, RoomJoinRequest request) {
+        // 참여할 방 조회
+        Room room = roomRepository.findByRoomCode(request.roomCode())
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_NOT_FOUND));
+
+        if (room.getType() == RoomType.PRIVATE) {
+            throw new BusinessException(RoomErrorCode.PRIVATE_ROOM_CANNOT_JOIN);
+        }
+
+        // 이미 참여 중인 방이면 그대로 방 정보 반환
+        if (roomUserRepository.existsByRoomAndUser(room, user)) {
+            return RoomJoinResponse.from(room);
+        }
+
+        // 참여 중이 아니라면 일반 멤버로 RoomUser 생성
+        RoomUser roomUser = RoomUser.builder()
+                .room(room)
+                .user(user)
+                .role(RoomRole.MEMBER)
+                .build();
+
+        roomUserRepository.save(roomUser);
+
+        return RoomJoinResponse.from(room);
+    }
+
+    @Transactional
+    @Override
+    public void leaveRoom(User user, Long roomId) {
+        // 나갈 방 조회
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_NOT_FOUND));
+
+        // 현재 유저가 해당 방에 속한 인원인지 검사
+        RoomUser roomUser = roomUserRepository.findByRoomAndUser(room, user)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_FORBIDDEN));
+
+        // 방장은 나가기 불가
+        if (roomUser.isOwner()) {
+            throw new BusinessException(RoomErrorCode.ROOM_OWNER_CANNOT_LEAVE);
+        }
+
+        // RoomUser 삭제
+        roomUserRepository.delete(roomUser);
+    }
+
+    @Override
+    public RoomMemberListResponse getRoomMembers(User user, Long roomId, Pageable pageable) {
+        // 방 조회
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_NOT_FOUND));
+
+        // 현재 유저가 해당 방에 속한 인원인지 검사
+        if (!roomUserRepository.existsByRoomAndUser(room, user)) {
+            throw new BusinessException(RoomErrorCode.ROOM_FORBIDDEN);
+        }
+
+        // 해당 방의 멤버 목록 조회
+        Page<RoomUser> roomUsers = roomUserRepository.findAllByRoomWithUser(room, pageable);
+
+        // RoomUser -> MemberDto 변환
+        List<RoomMemberListResponse.MemberDto> members = roomUsers.stream()
+                .map(RoomMemberListResponse.MemberDto::from)
+                .toList();
+
+        return RoomMemberListResponse.of(
+                members,
+                roomUsers.getNumber(),
+                roomUsers.getSize(),
+                roomUsers.hasNext()
+        );
+    }
+
+
+    // 방 코드 생성 메서드
+    private String generateRoomCode() {
+        String roomCode;
+
+        do {
+            roomCode = UUID.randomUUID()
+                    .toString()
+                    .replace("-", "")
+                    .substring(0, ROOM_CODE_LENGTH)
+                    .toUpperCase();
+        } while (roomRepository.existsByRoomCode(roomCode));
+
+        return roomCode;
+    }
+}
