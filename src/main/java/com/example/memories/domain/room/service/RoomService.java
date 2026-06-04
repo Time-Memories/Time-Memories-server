@@ -5,7 +5,6 @@ import com.example.memories.domain.room.dto.request.RoomJoinRequest;
 import com.example.memories.domain.room.dto.request.RoomUpdateRequest;
 import com.example.memories.domain.room.dto.response.*;
 import com.example.memories.domain.user.entity.User;
-import org.springframework.data.domain.Pageable;
 
 public interface RoomService {
     RoomCreateResponse createRoom(User user, RoomCreateRequest request);

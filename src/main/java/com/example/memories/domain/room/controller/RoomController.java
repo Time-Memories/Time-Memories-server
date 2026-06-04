@@ -92,7 +92,7 @@ public class RoomController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "방 나가기", description = "현재 로그인한 유저가 방을 나갑니다. 방장은 방을 나갈 수 없습니다.")
+    @Operation(summary = "방 나가기", description = "현재 로그인한 유저가 방을 나갑니다. 방장이 나가면 다른 멤버에게 방장이 위임되며, 혼자 남은 경우 방이 삭제됩니다.")
     @DeleteMapping("/{room_id}/leave")
     public ResponseEntity<Void> leaveRoom(
             @CurrentUser User user,

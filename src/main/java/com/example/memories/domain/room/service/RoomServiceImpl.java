@@ -194,12 +194,27 @@ public class RoomServiceImpl implements RoomService {
         RoomUser roomUser = roomUserRepository.findByRoomAndUser(room, user)
                 .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_FORBIDDEN));
 
-        // 방장은 나가기 불가
-        if (roomUser.isOwner()) {
-            throw new BusinessException(RoomErrorCode.ROOM_OWNER_CANNOT_LEAVE);
+        // 일반 멤버는 바로 나가기
+        if (!roomUser.isOwner()) {
+            roomUserRepository.delete(roomUser);
+            return;
         }
 
+        // 방장인 경우, 가장 먼저 들어온 일반 멤버를 다음 방장으로 조회
+        RoomUser nextOwner = roomUserRepository
+                .findFirstByRoomAndRoleOrderByIdAsc(room, RoomRole.MEMBER)
+                .orElse(null);
+
+        // 방장이 혼자 남은 경우 방 삭제
+        if (nextOwner == null) {
+            roomUserRepository.delete(roomUser);
+            roomRepository.delete(room);
+            return;
+        }
+
+        // 다른 멤버가 있으면 방장 위임 후 기존 방장 삭제
         // RoomUser 삭제
+        nextOwner.changeRole(RoomRole.OWNER);
         roomUserRepository.delete(roomUser);
     }
 

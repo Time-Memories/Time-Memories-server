@@ -19,6 +19,9 @@ public interface RoomUserRepository extends JpaRepository<RoomUser, Long> {
 
     Optional<RoomUser> findByRoomAndRole(Room room, RoomRole role);
 
+    // 방장 위임 대상 조회 (가장 먼저 입장한 MEMBER)
+    Optional<RoomUser> findFirstByRoomAndRoleOrderByIdAsc(Room room, RoomRole role);
+
     void deleteAllByRoom(Room room);
 
     // 특정 방의 멤버 목록 조회: 입장 순 ASC

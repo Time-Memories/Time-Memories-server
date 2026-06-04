@@ -49,4 +49,8 @@ public class RoomUser extends CreatedAtEntity {
     public boolean isOwner() {
         return this.role == RoomRole.OWNER;
     }
+
+    public void changeRole(RoomRole role) {
+        this.role = role;
+    }
 }
