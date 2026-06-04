@@ -33,6 +33,15 @@ public class RoomController {
                 .body(roomService.createRoom(user, request));
     }
 
+    @Operation(summary = "초대코드로 방 입장", description = "초대코드를 입력하여 방에 입장합니다.")
+    @PostMapping("/join")
+    public ResponseEntity<RoomJoinResponse> joinRoom(
+            @CurrentUser User user,
+            @RequestBody @Valid RoomJoinRequest request
+    ) {
+        return ResponseEntity.ok(roomService.joinRoom(user, request));
+    }
+
     @Operation(summary = "방 목록 조회", description = "현재 로그인한 유저가 참여 중인 방 목록을 커서 기반으로 조회합니다.")
     @GetMapping
     public ResponseEntity<RoomListResponse> getRooms(
@@ -50,6 +59,17 @@ public class RoomController {
             @PathVariable("room_id") Long roomId
     ) {
         return ResponseEntity.ok(roomService.getRoomDetail(user, roomId));
+    }
+
+    @Operation(summary = "방 멤버 조회", description = "해당 방에 참여 중인 멤버 목록을 커서 기반으로 조회합니다.")
+    @GetMapping("/{room_id}/members")
+    public ResponseEntity<RoomMemberListResponse> getRoomMembers(
+            @CurrentUser User user,
+            @PathVariable("room_id") Long roomId,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(roomService.getRoomMembers(user, roomId, cursor, size));
     }
 
     @Operation(summary = "방 정보 수정", description = "방장이 방 제목을 수정합니다.")
@@ -72,15 +92,6 @@ public class RoomController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "초대코드로 방 입장", description = "초대코드를 입력하여 방에 입장합니다.")
-    @PostMapping("/join")
-    public ResponseEntity<RoomJoinResponse> joinRoom(
-            @CurrentUser User user,
-            @RequestBody @Valid RoomJoinRequest request
-    ) {
-        return ResponseEntity.ok(roomService.joinRoom(user, request));
-    }
-
     @Operation(summary = "방 나가기", description = "현재 로그인한 유저가 방을 나갑니다. 방장은 방을 나갈 수 없습니다.")
     @DeleteMapping("/{room_id}/leave")
     public ResponseEntity<Void> leaveRoom(
@@ -89,16 +100,5 @@ public class RoomController {
     ) {
         roomService.leaveRoom(user, roomId);
         return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "방 멤버 조회", description = "해당 방에 참여 중인 멤버 목록을 커서 기반으로 조회합니다.")
-    @GetMapping("/{room_id}/members")
-    public ResponseEntity<RoomMemberListResponse> getRoomMembers(
-            @CurrentUser User user,
-            @PathVariable("room_id") Long roomId,
-            @RequestParam(required = false) Long cursor,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        return ResponseEntity.ok(roomService.getRoomMembers(user, roomId, cursor, size));
     }
 }
