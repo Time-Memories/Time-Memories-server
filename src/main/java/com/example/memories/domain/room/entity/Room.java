@@ -14,8 +14,11 @@ public class Room extends CreatedAtEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private RoomType type;
 
+    @Column(nullable = false)
     private String title;
 
     @Column(name = "room_code", nullable = false, unique = true)
@@ -28,18 +31,9 @@ public class Room extends CreatedAtEntity {
         this.roomCode = roomCode;
     }
 
-    public void update(String title, RoomType type) {
+    public void update(String title) {
         if (title != null) {
             this.title = title;
         }
-
-        if (type != null) {
-            this.type = type;
-        }
     }
-
-    public void updateRoomCode(String roomCode) {
-        this.roomCode = roomCode;
-    }
-
 }
