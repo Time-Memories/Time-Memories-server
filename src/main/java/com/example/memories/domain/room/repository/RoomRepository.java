@@ -1,0 +1,11 @@
+package com.example.memories.domain.room.repository;
+
+import com.example.memories.domain.room.entity.Room;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface RoomRepository extends JpaRepository<Room, Long> {
+    boolean existsByRoomCode(String roomCode);
+    Optional<Room> findByRoomCode(String roomCode);
+}
