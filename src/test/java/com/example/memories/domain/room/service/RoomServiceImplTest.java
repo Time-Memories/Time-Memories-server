@@ -20,10 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -70,32 +67,28 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("내가 참여한 방 목록을 조회한다")
+    @DisplayName("내가 참여한 방 목록을 커서 기반으로 조회한다")
     void getRooms_success() {
         // given
         User user = createUser(1L);
         Room room = createRoom(1L, "테스트 방", RoomType.GROUP);
         RoomUser roomUser = createRoomUser(1L, room, user, RoomRole.OWNER);
 
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<RoomUser> page = new PageImpl<>(List.of(roomUser), pageable, 1);
-
-        given(roomUserRepository.findAllByUserWithRoom(user, pageable)).willReturn(page);
+        given(roomUserRepository.findAllByUserWithRoomCursor(
+                eq(user),
+                isNull(),
+                eq(PageRequest.of(0, 11))
+        )).willReturn(List.of(roomUser));
 
         // when
-        RoomListResponse result = roomService.getRooms(user, pageable);
+        RoomListResponse result = roomService.getRooms(user, null, 10);
 
         // then
         assertThat(result.rooms()).hasSize(1);
         assertThat(result.rooms().get(0).roomId()).isEqualTo(1L);
         assertThat(result.rooms().get(0).title()).isEqualTo("테스트 방");
-        assertThat(result.page()).isEqualTo(0);
-        assertThat(result.size()).isEqualTo(10);
+        assertThat(result.nextCursor()).isNull();
         assertThat(result.hasNext()).isFalse();
-
-        then(roomUserRepository)
-                .should()
-                .findAllByUserWithRoom(user, pageable);
     }
 
     @Test
@@ -260,25 +253,53 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("방장은 방을 나갈 수 없다")
-    void leaveRoom_ownerCannotLeave() {
+    @DisplayName("방장이 나가고 다른 멤버가 있으면 가장 먼저 들어온 멤버에게 방장을 위임한다")
+    void leaveRoom_ownerLeave_transferOwner() {
         // given
-        User user = createUser(1L);
+        User owner = createUser(1L);
+        User member = createUser(2L);
         Room room = createRoom(1L, "테스트 방", RoomType.GROUP);
-        RoomUser roomUser = createRoomUser(1L, room, user, RoomRole.OWNER);
+
+        RoomUser ownerRoomUser = createRoomUser(1L, room, owner, RoomRole.OWNER);
+        RoomUser memberRoomUser = createRoomUser(2L, room, member, RoomRole.MEMBER);
 
         given(roomRepository.findById(1L)).willReturn(Optional.of(room));
-        given(roomUserRepository.findByRoomAndUser(room, user)).willReturn(Optional.of(roomUser));
+        given(roomUserRepository.findByRoomAndUser(room, owner)).willReturn(Optional.of(ownerRoomUser));
+        given(roomUserRepository.findFirstByRoomAndRoleOrderByIdAsc(room, RoomRole.MEMBER))
+                .willReturn(Optional.of(memberRoomUser));
 
-        // when & then
-        assertThatThrownBy(() -> roomService.leaveRoom(user, 1L))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
-                        .isEqualTo(RoomErrorCode.ROOM_OWNER_CANNOT_LEAVE));
+        // when
+        roomService.leaveRoom(owner, 1L);
+
+        // then
+        assertThat(memberRoomUser.getRole()).isEqualTo(RoomRole.OWNER);
+        then(roomUserRepository).should().delete(ownerRoomUser);
+        then(roomRepository).should(never()).delete(room);
     }
 
     @Test
-    @DisplayName("방 멤버 목록을 조회한다")
+    @DisplayName("방장이 혼자 남은 방에서 나가면 방을 삭제한다")
+    void leaveRoom_ownerAlone_deleteRoom() {
+        // given
+        User owner = createUser(1L);
+        Room room = createRoom(1L, "테스트 방", RoomType.GROUP);
+        RoomUser ownerRoomUser = createRoomUser(1L, room, owner, RoomRole.OWNER);
+
+        given(roomRepository.findById(1L)).willReturn(Optional.of(room));
+        given(roomUserRepository.findByRoomAndUser(room, owner)).willReturn(Optional.of(ownerRoomUser));
+        given(roomUserRepository.findFirstByRoomAndRoleOrderByIdAsc(room, RoomRole.MEMBER))
+                .willReturn(Optional.empty());
+
+        // when
+        roomService.leaveRoom(owner, 1L);
+
+        // then
+        then(roomUserRepository).should().delete(ownerRoomUser);
+        then(roomRepository).should().delete(room);
+    }
+
+    @Test
+    @DisplayName("방 멤버 목록을 커서 기반으로 조회한다")
     void getRoomMembers_success() {
         // given
         User user = createUser(1L);
@@ -286,21 +307,24 @@ class RoomServiceImplTest {
         Room room = createRoom(1L, "테스트 방", RoomType.GROUP);
         RoomUser memberRoomUser = createRoomUser(1L, room, member, RoomRole.MEMBER);
 
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<RoomUser> page = new PageImpl<>(List.of(memberRoomUser), pageable, 1);
-
         given(roomRepository.findById(1L)).willReturn(Optional.of(room));
         given(roomUserRepository.existsByRoomAndUser(room, user)).willReturn(true);
-        given(roomUserRepository.findAllByRoomWithUser(room, pageable)).willReturn(page);
+        given(roomUserRepository.findAllByRoomWithUserCursor(
+                eq(room),
+                isNull(),
+                eq(PageRequest.of(0, 11))
+        )).willReturn(List.of(memberRoomUser));
 
         // when
-        RoomMemberListResponse result = roomService.getRoomMembers(user, 1L, pageable);
+        RoomMemberListResponse result = roomService.getRoomMembers(user, 1L, null, 10);
 
         // then
         assertThat(result.members()).hasSize(1);
         assertThat(result.members().get(0).userId()).isEqualTo(2L);
         assertThat(result.members().get(0).name()).isEqualTo("user2");
         assertThat(result.members().get(0).role()).isEqualTo(RoomRole.MEMBER);
+        assertThat(result.nextCursor()).isNull();
+        assertThat(result.hasNext()).isFalse();
     }
 
     private User createUser(Long id) {

@@ -78,7 +78,8 @@ class RoomControllerTest {
     void getRooms_returnsOk() {
         // given
         User user = buildUser(1L);
-        Pageable pageable = PageRequest.of(0, 10);
+        Long cursor = null;
+        int size = 10;
 
         RoomListResponse dto = new RoomListResponse(
                 List.of(
@@ -89,16 +90,15 @@ class RoomControllerTest {
                                 LocalDateTime.of(2026, 6, 4, 0, 0)
                         )
                 ),
-                0,
-                10,
+                null,
                 false
         );
 
-        given(roomService.getRooms(user, pageable)).willReturn(dto);
+        given(roomService.getRooms(user, cursor, size)).willReturn(dto);
 
         // when
         ResponseEntity<RoomListResponse> response =
-                roomController.getRooms(user, pageable);
+                roomController.getRooms(user, cursor, size);
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -209,7 +209,8 @@ class RoomControllerTest {
     void getRoomMembers_returnsOk() {
         // given
         User user = buildUser(1L);
-        Pageable pageable = PageRequest.of(0, 10);
+        Long cursor = null;
+        int size = 10;
 
         RoomMemberListResponse dto = new RoomMemberListResponse(
                 List.of(
@@ -219,16 +220,15 @@ class RoomControllerTest {
                                 RoomRole.OWNER
                         )
                 ),
-                0,
-                10,
+                null,
                 false
         );
 
-        given(roomService.getRoomMembers(user, 1L, pageable)).willReturn(dto);
+        given(roomService.getRoomMembers(user, 1L, cursor, size)).willReturn(dto);
 
         // when
         ResponseEntity<RoomMemberListResponse> response =
-                roomController.getRoomMembers(user, 1L, pageable);
+                roomController.getRoomMembers(user, 1L, cursor, size);
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
