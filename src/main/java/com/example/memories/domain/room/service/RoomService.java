@@ -9,11 +9,11 @@ import org.springframework.data.domain.Pageable;
 
 public interface RoomService {
     RoomCreateResponse createRoom(User user, RoomCreateRequest request);
-    RoomListResponse getRooms(User user, Pageable pageable);
+    RoomListResponse getRooms(User user, Long cursor, int size);
     RoomDetailResponse getRoomDetail(User user, Long roomId);
     RoomUpdateResponse updateRoom(User user, Long roomId, RoomUpdateRequest request);
     void deleteRoom(User user, Long roomId);
     RoomJoinResponse joinRoom(User user, RoomJoinRequest request);
     void leaveRoom(User user, Long roomId);
-    RoomMemberListResponse getRoomMembers(User user, Long roomId, Pageable pageable);
+    RoomMemberListResponse getRoomMembers(User user, Long roomId, Long cursor, int size);
 }

@@ -4,11 +4,12 @@ import com.example.memories.domain.room.entity.Room;
 import com.example.memories.domain.room.entity.RoomUser;
 import com.example.memories.domain.room.entity.enums.RoomRole;
 import com.example.memories.domain.user.entity.User;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface RoomUserRepository extends JpaRepository<RoomUser, Long> {
@@ -20,34 +21,29 @@ public interface RoomUserRepository extends JpaRepository<RoomUser, Long> {
 
     void deleteAllByRoom(Room room);
 
-    // 특정 방의 멤버 목록 조회
-    // MemberDto 생성 시 user 정보가 필요하므로 fetch join
-    @Query(value = """
+    // 특정 방의 멤버 목록 조회: 입장 순 ASC
+    @Query("""
             SELECT ru
             FROM RoomUser ru
             JOIN FETCH ru.user
             WHERE ru.room = :room
-            """,
-    countQuery = """
-            SELECT COUNT(ru)
-            FROM RoomUser ru
-            WHERE ru.room = :room
+              AND (:cursor IS NULL OR ru.id > :cursor)
+            ORDER BY ru.id ASC
             """)
-    Page<RoomUser> findAllByRoomWithUser(Room room, Pageable pageable);
+    List<RoomUser> findAllByRoomWithUserCursor(@Param("room") Room room,
+                                               @Param("cursor") Long cursor,
+                                               Pageable pageable);
 
-    // 현재 유저가 참여한 방 목록 조회
-    // RoomDto 생성 시 room 정보가 필요하므로 fetch join
-    @Query(value = """
+    // 현재 유저가 참여한 방 목록 조회: 최신 방 DESC
+    @Query("""
             SELECT ru
             FROM RoomUser ru
             JOIN FETCH ru.room
             WHERE ru.user = :user
-            """,
-    countQuery = """
-            SELECT COUNT(ru)
-            FROM RoomUser ru
-            WHERE ru.user = :user
-            """
-    )
-    Page<RoomUser> findAllByUserWithRoom(User user, Pageable pageable);
+              AND (:cursor IS NULL OR ru.room.id < :cursor)
+            ORDER BY ru.room.id DESC
+            """)
+    List<RoomUser> findAllByUserWithRoomCursor(@Param("user") User user,
+                                               @Param("cursor") Long cursor,
+                                               Pageable pageable);
 }

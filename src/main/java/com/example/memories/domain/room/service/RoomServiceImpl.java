@@ -14,8 +14,7 @@ import com.example.memories.domain.room.repository.RoomUserRepository;
 import com.example.memories.domain.user.entity.User;
 import com.example.memories.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,20 +59,35 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomListResponse getRooms(User user, Pageable pageable) {
-        Page<RoomUser> roomUsers = roomUserRepository.findAllByUserWithRoom(user, pageable);
+    public RoomListResponse getRooms(User user, Long cursor, int size) {
+        // 현재 유저가 참여한 방 목록 조회
+        List<RoomUser> roomUsers = roomUserRepository.findAllByUserWithRoomCursor(
+                user,
+                cursor,
+                PageRequest.of(0, size + 1)
+        );
+
+        // 조회된 데이터가 요청 개수보다 많으면 다음 페이지 존재
+        // 다음 페이지 존재 시 마지막 데이터는 hasNext 확인용이므로 제외
+        boolean hasNext = roomUsers.size() > size;
+        List<RoomUser> content = hasNext
+                ? roomUsers.subList(0, size)
+                : roomUsers;
 
         // RoomUser -> RoomDto 변환
-        List<RoomListResponse.RoomDto> rooms = roomUsers.stream()
+        List<RoomListResponse.RoomDto> rooms = content.stream()
                 .map(RoomUser::getRoom)
                 .map(RoomListResponse.RoomDto::from)
                 .toList();
 
+        Long nextCursor = hasNext
+                ? content.get(content.size() - 1).getRoom().getId()
+                : null;
+
         return RoomListResponse.of(
                 rooms,
-                roomUsers.getNumber(),
-                roomUsers.getSize(),
-                roomUsers.hasNext()
+                nextCursor,
+                hasNext
         );
     }
 
@@ -190,7 +204,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomMemberListResponse getRoomMembers(User user, Long roomId, Pageable pageable) {
+    public RoomMemberListResponse getRoomMembers(User user, Long roomId, Long cursor, int size) {
         // 방 조회
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_NOT_FOUND));
@@ -201,18 +215,33 @@ public class RoomServiceImpl implements RoomService {
         }
 
         // 해당 방의 멤버 목록 조회
-        Page<RoomUser> roomUsers = roomUserRepository.findAllByRoomWithUser(room, pageable);
+        List<RoomUser> roomUsers = roomUserRepository.findAllByRoomWithUserCursor(
+                room,
+                cursor,
+                PageRequest.of(0, size + 1)
+        );
+
+        // 조회된 데이터가 요청 개수보다 많으면 다음 페이지 존재
+        // 다음 페이지 존재 시 마지막 데이터는 hasNext 확인용이므로 제외
+        boolean hasNext = roomUsers.size() > size;
+        List<RoomUser> content = hasNext
+                ? roomUsers.subList(0, size)
+                : roomUsers;
 
         // RoomUser -> MemberDto 변환
-        List<RoomMemberListResponse.MemberDto> members = roomUsers.stream()
+        List<RoomMemberListResponse.MemberDto> members = content.stream()
                 .map(RoomMemberListResponse.MemberDto::from)
                 .toList();
 
+        // 다음 페이지가 존재하면 마지막 RoomUser의 ID를 다음 Cursor로 사용
+        Long nextCursor = hasNext
+                ? content.get(content.size() - 1).getId()
+                : null;
+
         return RoomMemberListResponse.of(
                 members,
-                roomUsers.getNumber(),
-                roomUsers.getSize(),
-                roomUsers.hasNext()
+                nextCursor,
+                hasNext
         );
     }
 

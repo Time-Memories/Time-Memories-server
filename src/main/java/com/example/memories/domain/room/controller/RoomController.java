@@ -11,8 +11,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,13 +33,14 @@ public class RoomController {
                 .body(roomService.createRoom(user, request));
     }
 
-    @Operation(summary = "방 목록 조회", description = "현재 로그인한 유저가 참여 중인 방 목록을 조회합니다.")
+    @Operation(summary = "방 목록 조회", description = "현재 로그인한 유저가 참여 중인 방 목록을 커서 기반으로 조회합니다.")
     @GetMapping
     public ResponseEntity<RoomListResponse> getRooms(
             @CurrentUser User user,
-            @PageableDefault(page = 0, size = 10) Pageable pageable
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(roomService.getRooms(user, pageable));
+        return ResponseEntity.ok(roomService.getRooms(user, cursor, size));
     }
 
     @Operation(summary = "방 상세 조회", description = "방 상세 정보를 조회합니다.")
@@ -92,13 +91,14 @@ public class RoomController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "방 멤버 조회", description = "해당 방에 참여 중인 멤버 목록을 조회합니다.")
+    @Operation(summary = "방 멤버 조회", description = "해당 방에 참여 중인 멤버 목록을 커서 기반으로 조회합니다.")
     @GetMapping("/{room_id}/members")
     public ResponseEntity<RoomMemberListResponse> getRoomMembers(
             @CurrentUser User user,
             @PathVariable("room_id") Long roomId,
-            @PageableDefault(page = 0, size = 10) Pageable pageable
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(roomService.getRoomMembers(user, roomId, pageable));
+        return ResponseEntity.ok(roomService.getRoomMembers(user, roomId, cursor, size));
     }
 }

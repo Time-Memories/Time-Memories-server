@@ -8,20 +8,17 @@ import java.util.List;
 
 public record RoomMemberListResponse(
         List<MemberDto> members,
-        Integer page,
-        Integer size,
+        Long nextCursor,
         Boolean hasNext
 ) {
     public static RoomMemberListResponse of(
             List<MemberDto> members,
-            Integer page,
-            Integer size,
+            Long nextCursor,
             Boolean hasNext
     ) {
         return new RoomMemberListResponse(
                 members,
-                page,
-                size,
+                nextCursor,
                 hasNext
         );
     }
