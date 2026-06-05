@@ -157,6 +157,10 @@ public class DiaryServiceImpl implements DiaryService {
             throw new BusinessException(DiaryErrorCode.DIARY_NOT_AUTHOR);
         }
 
+        if (!roomUserRepository.existsByRoomAndUser(diary.getRoom(), user)) {
+            throw new BusinessException(DiaryErrorCode.DIARY_AUTHOR_LEFT_ROOM);
+        }
+
         diary.update(request.title(), request.content(), request.diaryDate());
 
         List<String> newImageKeys = request.imageKeys() != null ? request.imageKeys() : Collections.emptyList();
@@ -186,6 +190,10 @@ public class DiaryServiceImpl implements DiaryService {
 
         if (!diary.isAuthor(user.getId())) {
             throw new BusinessException(DiaryErrorCode.DIARY_NOT_AUTHOR);
+        }
+
+        if (!roomUserRepository.existsByRoomAndUser(diary.getRoom(), user)) {
+            throw new BusinessException(DiaryErrorCode.DIARY_AUTHOR_LEFT_ROOM);
         }
 
         // DB 커밋 성공 후 S3 삭제 (트랜잭션 롤백 시 S3 삭제 방지)

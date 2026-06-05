@@ -251,6 +251,7 @@ class DiaryServiceImplTest {
         DiaryUpdateRequestDto request = new DiaryUpdateRequestDto("새 제목", "새 내용", LocalDate.of(2026, 6, 1), List.of("img/keep.jpg", "img/new.jpg"));
 
         given(diaryRepository.findWithImagesById(10L)).willReturn(Optional.of(diary));
+        given(roomUserRepository.existsByRoomAndUser(room, user)).willReturn(true);
         given(s3PresignService.resolveImageUrl("img/keep.jpg")).willReturn("https://cdn/img/keep.jpg");
         given(s3PresignService.resolveImageUrl("img/new.jpg")).willReturn("https://cdn/img/new.jpg");
 
@@ -280,6 +281,25 @@ class DiaryServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo(DiaryErrorCode.DIARY_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("작성자가 방을 탈퇴한 경우 일기를 수정하려 하면 DIARY_AUTHOR_LEFT_ROOM 예외가 발생한다")
+    void updateDiary_authorLeftRoom() {
+        // given
+        User user = createUser(1L);
+        Room room = createRoom(1L);
+        Diary diary = createDiary(10L, user, room, "제목");
+        DiaryUpdateRequestDto request = new DiaryUpdateRequestDto("새 제목", "새 내용", LocalDate.of(2026, 6, 1), List.of());
+
+        given(diaryRepository.findWithImagesById(10L)).willReturn(Optional.of(diary));
+        given(roomUserRepository.existsByRoomAndUser(room, user)).willReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> diaryService.updateDiary(user, 10L, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(DiaryErrorCode.DIARY_AUTHOR_LEFT_ROOM));
     }
 
     @Test
@@ -314,6 +334,7 @@ class DiaryServiceImplTest {
         diary.getImages().add(createDiaryImage(2L, diary, "img/b.jpg", 1));
 
         given(diaryRepository.findWithImagesById(10L)).willReturn(Optional.of(diary));
+        given(roomUserRepository.existsByRoomAndUser(room, user)).willReturn(true);
 
         // when
         diaryService.deleteDiary(user, 10L);
@@ -337,6 +358,24 @@ class DiaryServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo(DiaryErrorCode.DIARY_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("작성자가 방을 탈퇴한 경우 일기를 삭제하려 하면 DIARY_AUTHOR_LEFT_ROOM 예외가 발생한다")
+    void deleteDiary_authorLeftRoom() {
+        // given
+        User user = createUser(1L);
+        Room room = createRoom(1L);
+        Diary diary = createDiary(10L, user, room, "제목");
+
+        given(diaryRepository.findWithImagesById(10L)).willReturn(Optional.of(diary));
+        given(roomUserRepository.existsByRoomAndUser(room, user)).willReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> diaryService.deleteDiary(user, 10L))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(DiaryErrorCode.DIARY_AUTHOR_LEFT_ROOM));
     }
 
     @Test
