@@ -59,7 +59,7 @@ public class DiaryServiceImpl implements DiaryService {
                 .room(room)
                 .title(request.title())
                 .contents(request.content())
-                .diaryDate(LocalDate.now())
+                .diaryDate(request.diaryDate())
                 .build();
         diaryRepository.save(diary);
 
@@ -157,7 +157,7 @@ public class DiaryServiceImpl implements DiaryService {
             throw new BusinessException(DiaryErrorCode.DIARY_NOT_AUTHOR);
         }
 
-        diary.update(request.title(), request.content());
+        diary.update(request.title(), request.content(), request.diaryDate());
 
         List<String> newImageKeys = request.imageKeys() != null ? request.imageKeys() : Collections.emptyList();
 

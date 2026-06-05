@@ -63,7 +63,7 @@ class DiaryServiceImplTest {
         // given
         User user = createUser(1L);
         Room room = createRoom(1L);
-        DiaryCreateRequestDto request = new DiaryCreateRequestDto("제목", "내용", List.of("img/key1.jpg", "img/key2.jpg"));
+        DiaryCreateRequestDto request = new DiaryCreateRequestDto("제목", "내용", LocalDate.of(2026, 5, 15), List.of("img/key1.jpg", "img/key2.jpg"));
 
         given(roomRepository.findById(1L)).willReturn(Optional.of(room));
         given(roomUserRepository.existsByRoomAndUser(room, user)).willReturn(true);
@@ -91,7 +91,7 @@ class DiaryServiceImplTest {
     void createDiary_roomNotFound() {
         // given
         User user = createUser(1L);
-        DiaryCreateRequestDto request = new DiaryCreateRequestDto("제목", "내용", List.of());
+        DiaryCreateRequestDto request = new DiaryCreateRequestDto("제목", "내용", LocalDate.of(2026, 5, 15), List.of());
 
         given(roomRepository.findById(99L)).willReturn(Optional.empty());
 
@@ -108,7 +108,7 @@ class DiaryServiceImplTest {
         // given
         User user = createUser(1L);
         Room room = createRoom(1L);
-        DiaryCreateRequestDto request = new DiaryCreateRequestDto("제목", "내용", List.of());
+        DiaryCreateRequestDto request = new DiaryCreateRequestDto("제목", "내용", LocalDate.of(2026, 5, 15), List.of());
 
         given(roomRepository.findById(1L)).willReturn(Optional.of(room));
         given(roomUserRepository.existsByRoomAndUser(room, user)).willReturn(false);
@@ -248,7 +248,7 @@ class DiaryServiceImplTest {
         diary.getImages().add(createDiaryImage(1L, diary, "img/keep.jpg", 0));
         diary.getImages().add(createDiaryImage(2L, diary, "img/remove.jpg", 1));
 
-        DiaryUpdateRequestDto request = new DiaryUpdateRequestDto("새 제목", "새 내용", List.of("img/keep.jpg", "img/new.jpg"));
+        DiaryUpdateRequestDto request = new DiaryUpdateRequestDto("새 제목", "새 내용", LocalDate.of(2026, 6, 1), List.of("img/keep.jpg", "img/new.jpg"));
 
         given(diaryRepository.findWithImagesById(10L)).willReturn(Optional.of(diary));
         given(s3PresignService.resolveImageUrl("img/keep.jpg")).willReturn("https://cdn/img/keep.jpg");
@@ -271,7 +271,7 @@ class DiaryServiceImplTest {
     void updateDiary_diaryNotFound() {
         // given
         User user = createUser(1L);
-        DiaryUpdateRequestDto request = new DiaryUpdateRequestDto("새 제목", "새 내용", List.of());
+        DiaryUpdateRequestDto request = new DiaryUpdateRequestDto("새 제목", "새 내용", LocalDate.of(2026, 6, 1), List.of());
 
         given(diaryRepository.findWithImagesById(99L)).willReturn(Optional.empty());
 
@@ -290,7 +290,7 @@ class DiaryServiceImplTest {
         User other = createUser(2L);
         Room room = createRoom(1L);
         Diary diary = createDiary(10L, author, room, "제목");
-        DiaryUpdateRequestDto request = new DiaryUpdateRequestDto("새 제목", "새 내용", List.of());
+        DiaryUpdateRequestDto request = new DiaryUpdateRequestDto("새 제목", "새 내용", LocalDate.of(2026, 6, 1), List.of());
 
         given(diaryRepository.findWithImagesById(10L)).willReturn(Optional.of(diary));
 

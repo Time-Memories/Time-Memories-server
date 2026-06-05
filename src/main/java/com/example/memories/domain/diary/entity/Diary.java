@@ -50,9 +50,10 @@ public class Diary extends AuditingEntity {
         this.diaryDate = diaryDate;
     }
 
-    public void update(String title, String contents) {
+    public void update(String title, String contents, LocalDate diaryDate) {
         if (title != null) this.title = title;
         if (contents != null) this.contents = contents;
+        if (diaryDate != null) this.diaryDate = diaryDate;
     }
 
     public void updateImages(List<String> newImageKeys) {

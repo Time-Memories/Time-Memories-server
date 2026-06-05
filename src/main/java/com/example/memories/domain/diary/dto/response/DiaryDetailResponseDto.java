@@ -2,6 +2,7 @@ package com.example.memories.domain.diary.dto.response;
 
 import com.example.memories.domain.diary.entity.Diary;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,6 +12,7 @@ public record DiaryDetailResponseDto(
         String authorName,
         String title,
         String content,
+        LocalDate diaryDate,
         List<String> imageUrls,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -22,6 +24,7 @@ public record DiaryDetailResponseDto(
                 diary.getUser().getName(),
                 diary.getTitle(),
                 diary.getContents(),
+                diary.getDiaryDate(),
                 imageUrls,
                 diary.getCreatedAt(),
                 diary.getUpdatedAt()
