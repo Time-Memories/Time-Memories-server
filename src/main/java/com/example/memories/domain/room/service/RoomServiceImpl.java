@@ -9,6 +9,8 @@ import com.example.memories.domain.room.entity.RoomUser;
 import com.example.memories.domain.room.entity.enums.RoomRole;
 import com.example.memories.domain.room.entity.enums.RoomType;
 import com.example.memories.domain.room.exception.RoomErrorCode;
+import com.example.memories.domain.diary.entity.Diary;
+import com.example.memories.domain.diary.repository.DiaryRepository;
 import com.example.memories.domain.room.repository.RoomRepository;
 import com.example.memories.domain.room.repository.RoomUserRepository;
 import com.example.memories.domain.user.entity.User;
@@ -28,6 +30,7 @@ public class RoomServiceImpl implements RoomService {
 
     private static final int ROOM_CODE_LENGTH = 6;
 
+    private final DiaryRepository diaryRepository;
     private final RoomRepository roomRepository;
     private final RoomUserRepository roomUserRepository;
 
@@ -151,6 +154,10 @@ public class RoomServiceImpl implements RoomService {
         // 방에 속한 RoomUser 먼저 삭제
         roomUserRepository.deleteAllByRoom(room);
 
+        // 방에 속한 일기 삭제 (DiaryImage는 Diary의 cascade로 함께 삭제됨)
+        List<Diary> diaries = diaryRepository.findAllByRoom(room);
+        diaryRepository.deleteAll(diaries);
+
         // 방 삭제
         roomRepository.delete(room);
     }
@@ -208,6 +215,9 @@ public class RoomServiceImpl implements RoomService {
         // 방장이 혼자 남은 경우 방 삭제
         if (nextOwner == null) {
             roomUserRepository.delete(roomUser);
+            // 방에 속한 일기 삭제 (DiaryImage는 Diary의 cascade로 함께 삭제됨)
+            List<Diary> diaries = diaryRepository.findAllByRoom(room);
+            diaryRepository.deleteAll(diaries);
             roomRepository.delete(room);
             return;
         }

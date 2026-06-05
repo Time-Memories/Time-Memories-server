@@ -9,6 +9,8 @@ import com.example.memories.domain.room.entity.RoomUser;
 import com.example.memories.domain.room.entity.enums.RoomRole;
 import com.example.memories.domain.room.entity.enums.RoomType;
 import com.example.memories.domain.room.exception.RoomErrorCode;
+import com.example.memories.domain.diary.entity.Diary;
+import com.example.memories.domain.diary.repository.DiaryRepository;
 import com.example.memories.domain.room.repository.RoomRepository;
 import com.example.memories.domain.room.repository.RoomUserRepository;
 import com.example.memories.domain.user.entity.AuthProvider;
@@ -34,6 +36,7 @@ import static org.mockito.BDDMockito.*;
 @ExtendWith(MockitoExtension.class)
 class RoomServiceImplTest {
 
+    @Mock DiaryRepository diaryRepository;
     @Mock RoomRepository roomRepository;
     @Mock RoomUserRepository roomUserRepository;
 
@@ -188,12 +191,14 @@ class RoomServiceImplTest {
 
         given(roomRepository.findById(1L)).willReturn(Optional.of(room));
         given(roomUserRepository.findByRoomAndUser(room, user)).willReturn(Optional.of(roomUser));
+        given(diaryRepository.findAllByRoom(room)).willReturn(List.of());
 
         // when
         roomService.deleteRoom(user, 1L);
 
         // then
         then(roomUserRepository).should().deleteAllByRoom(room);
+        then(diaryRepository).should().deleteAll(List.of());
         then(roomRepository).should().delete(room);
     }
 
@@ -289,12 +294,14 @@ class RoomServiceImplTest {
         given(roomUserRepository.findByRoomAndUser(room, owner)).willReturn(Optional.of(ownerRoomUser));
         given(roomUserRepository.findFirstByRoomAndRoleOrderByIdAsc(room, RoomRole.MEMBER))
                 .willReturn(Optional.empty());
+        given(diaryRepository.findAllByRoom(room)).willReturn(List.of());
 
         // when
         roomService.leaveRoom(owner, 1L);
 
         // then
         then(roomUserRepository).should().delete(ownerRoomUser);
+        then(diaryRepository).should().deleteAll(List.of());
         then(roomRepository).should().delete(room);
     }
 
