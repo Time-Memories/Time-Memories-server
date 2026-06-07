@@ -16,7 +16,12 @@ import java.util.Optional;
 
 public interface DiaryRepository extends JpaRepository<Diary, Long> {
 
-    @Query(value = "SELECT d FROM Diary d JOIN FETCH d.user WHERE d.room = :room ORDER BY d.id DESC",
+    // 권한 검사용 Room 함께 조회 (diary.getRoom() 프록시 초기화로 인한 추가 쿼리 방지)
+    @EntityGraph(attributePaths = {"room"})
+    Optional<Diary> findWithRoomById(Long id);
+
+    // 작성자(user)는 탈퇴 시 soft delete(@SQLRestriction)로 필터링되므로 LEFT JOIN으로 일기 자체는 유지
+    @Query(value = "SELECT d FROM Diary d LEFT JOIN FETCH d.user WHERE d.room = :room ORDER BY d.id DESC",
            countQuery = "SELECT COUNT(d) FROM Diary d WHERE d.room = :room")
     Page<Diary> findAllByRoomWithUser(@Param("room") Room room, Pageable pageable);
 
@@ -44,7 +49,7 @@ public interface DiaryRepository extends JpaRepository<Diary, Long> {
     @Query("""
             SELECT DISTINCT d FROM Diary d
             JOIN FETCH d.room
-            JOIN FETCH d.user
+            LEFT JOIN FETCH d.user
             JOIN RoomUser ru ON d.room = ru.room
             WHERE ru.user = :user
               AND d.diaryDate BETWEEN :startDate AND :endDate

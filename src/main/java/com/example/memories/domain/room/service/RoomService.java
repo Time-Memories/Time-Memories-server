@@ -14,5 +14,6 @@ public interface RoomService {
     void deleteRoom(User user, Long roomId);
     RoomJoinResponse joinRoom(User user, RoomJoinRequest request);
     void leaveRoom(User user, Long roomId);
+    void leaveAllRooms(User user);
     RoomMemberListResponse getRoomMembers(User user, Long roomId, Long cursor, int size);
 }

@@ -1,6 +1,7 @@
 package com.example.memories.domain.user.service;
 
 import com.example.memories.domain.auth.repository.RefreshTokenRepository;
+import com.example.memories.domain.room.service.RoomService;
 import com.example.memories.domain.user.dto.request.UpdateUserRequestDto;
 import com.example.memories.domain.user.dto.response.UpdateUserResponseDto;
 import com.example.memories.domain.user.dto.response.UserProfileResponseDto;
@@ -28,6 +29,7 @@ class UserServiceImplTest {
 
     @Mock UserRepository userRepository;
     @Mock RefreshTokenRepository refreshTokenRepository;
+    @Mock RoomService roomService;
 
     @InjectMocks UserServiceImpl userService;
 
@@ -142,7 +144,7 @@ class UserServiceImplTest {
     // ── deleteUser ────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("회원 탈퇴 시 유저를 삭제하고 Refresh Token도 함께 삭제한다")
+    @DisplayName("회원 탈퇴 시 가입한 모든 방에서 퇴장하고 유저와 Refresh Token을 삭제한다")
     void deleteUser_success() {
         User user = User.builder()
                 .name("Test User").email("test@example.com")
@@ -152,6 +154,7 @@ class UserServiceImplTest {
 
         userService.deleteUser(1L);
 
+        then(roomService).should().leaveAllRooms(user);
         then(userRepository).should().delete(user);
         then(refreshTokenRepository).should().delete(1L);
     }
@@ -166,6 +169,7 @@ class UserServiceImplTest {
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo(UserErrorCode.USER_NOT_FOUND));
 
+        then(roomService).should(never()).leaveAllRooms(any());
         then(userRepository).should(never()).delete(any(User.class));
         then(refreshTokenRepository).should(never()).delete(any());
     }
