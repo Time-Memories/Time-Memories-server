@@ -25,6 +25,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends AuditingEntity {
 
+    // 탈퇴(soft delete)한 작성자를 응답에서 익명으로 표시할 때 사용하는 이름
+    public static final String WITHDRAWN_NAME = "탈퇴한 사용자";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
