@@ -48,6 +48,7 @@ class DiaryServiceImplTest {
 
     @Mock DiaryRepository diaryRepository;
     @Mock DiaryImageRepository diaryImageRepository;
+    @Mock com.example.memories.domain.comment.repository.CommentRepository commentRepository;
     @Mock RoomRepository roomRepository;
     @Mock RoomUserRepository roomUserRepository;
     @Mock S3PresignService s3PresignService;
@@ -343,6 +344,7 @@ class DiaryServiceImplTest {
         ArgumentCaptor<S3ImageDeleteEvent> captor = ArgumentCaptor.forClass(S3ImageDeleteEvent.class);
         then(eventPublisher).should().publishEvent(captor.capture());
         assertThat(captor.getValue().imageKeys()).containsExactlyInAnyOrder("img/a.jpg", "img/b.jpg");
+        then(commentRepository).should().deleteAllByDiary(diary);
         then(diaryRepository).should().delete(diary);
     }
 
