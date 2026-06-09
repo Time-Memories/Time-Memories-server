@@ -14,7 +14,6 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -51,12 +50,6 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 validateRoomSubscription(accessor, authentication);
             }
 
-            // 현재 메시지 처리 스레드의 SecurityContext에 인증 정보 저장
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            // WebSocket 세션에 사용자 정보 저장 (이후 메시지에서 재사용)
-            accessor.setUser(authentication);
-
             log.debug("WebSocket {} 요청 - userId={}",
                     accessor.getCommand(),
                     authentication.getPrincipal());
@@ -72,9 +65,8 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (accessor != null) {
             StompCommand command = accessor.getCommand();
 
-            // 연결 종료(DISCONNECT) 시에만 SecurityContext 정리
+            // 연결 종료(DISCONNECT) 시 로그 출력
             if (StompCommand.DISCONNECT.equals(command)) {
-                SecurityContextHolder.clearContext();
                 log.info("WebSocket DISCONNECT");
             }
         }
@@ -102,9 +94,6 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                         null,
                         List.of()
                 );
-
-        // 현재 스레드 인증 정보 저장
-        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         // WebSocket 세션에 사용자 정보 저장 (이후 메시지에서 재사용)
         accessor.setUser(authentication);
