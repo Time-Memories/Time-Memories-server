@@ -2,7 +2,9 @@ package com.example.memories.global.exception;
 
 import com.example.memories.domain.chat.dto.response.ErrorResponseDto;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
+import org.springframework.messaging.handler.annotation.support.MethodArgumentNotValidException;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 
@@ -32,6 +34,27 @@ public class WebSocketExceptionHandler {
         return ErrorResponseDto.of(
                 "VALIDATION_ERROR",
                 e.getMessage(),
+                "INVALID_ARGUMENT"
+        );
+    }
+
+    @MessageExceptionHandler(MethodArgumentNotValidException.class)
+    @SendToUser("/queue/errors")
+    public ErrorResponseDto handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException e
+    ) {
+        String message = e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .findFirst()
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .orElse("입력값이 올바르지 않습니다.");
+
+        log.warn("WebSocket Validation 예외 발생: {}", message);
+
+        return ErrorResponseDto.of(
+                "VALIDATION_ERROR",
+                message,
                 "INVALID_ARGUMENT"
         );
     }
