@@ -7,6 +7,8 @@ import com.example.memories.domain.chat.dto.response.ChatResponseDto;
 import com.example.memories.domain.chat.dto.response.MessageDeletedResponseDto;
 import com.example.memories.domain.chat.entity.Chat;
 import com.example.memories.domain.chat.entity.ChatImage;
+import com.example.memories.domain.chat.event.ChatCreatedEvent;
+import com.example.memories.domain.chat.event.ChatDeletedEvent;
 import com.example.memories.domain.chat.exception.ChatErrorCode;
 import com.example.memories.domain.chat.repository.ChatImageRepository;
 import com.example.memories.domain.chat.repository.ChatRepository;
@@ -21,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +40,6 @@ public class ChatServiceImpl implements ChatService{
     private final ChatImageRepository chatImageRepository;
     private final RoomRepository roomRepository;
     private final RoomUserRepository roomUserRepository;
-    private final SimpMessagingTemplate messagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -66,7 +66,7 @@ public class ChatServiceImpl implements ChatService{
         ChatResponseDto response = ChatResponseDto.from(chat, List.of());
 
         // WebSocket으로 메시지 브로드캐스트
-        messagingTemplate.convertAndSend("/topic/rooms/" + roomId, response);
+        eventPublisher.publishEvent(new ChatCreatedEvent(roomId, response));
 
         return response;
     }
@@ -106,7 +106,7 @@ public class ChatServiceImpl implements ChatService{
         ChatResponseDto response = ChatResponseDto.from(chat, request.imageKeys());
 
         // WebSocket 구독자들에게 실시간 메시지 브로드캐스트
-        messagingTemplate.convertAndSend("/topic/rooms/" + roomId, response);
+        eventPublisher.publishEvent(new ChatCreatedEvent(roomId, response));
 
         return response;
     }
@@ -199,9 +199,8 @@ public class ChatServiceImpl implements ChatService{
             eventPublisher.publishEvent(new S3ImageDeleteEvent(keysToDelete));
         }
 
-        messagingTemplate.convertAndSend(
-                "/topic/rooms/" + roomId + "/updates",
-                new MessageDeletedResponseDto(chatId)
+        eventPublisher.publishEvent(
+                new ChatDeletedEvent(roomId, new MessageDeletedResponseDto(chatId))
         );
     }
 }
