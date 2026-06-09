@@ -16,7 +16,9 @@ import com.example.memories.domain.room.repository.RoomRepository;
 import com.example.memories.domain.room.repository.RoomUserRepository;
 import com.example.memories.domain.user.entity.User;
 import com.example.memories.global.exception.BusinessException;
+import com.example.memories.infra.s3.S3ImageDeleteEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -38,6 +40,7 @@ public class ChatServiceImpl implements ChatService{
     private final RoomRepository roomRepository;
     private final RoomUserRepository roomUserRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -183,7 +186,18 @@ public class ChatServiceImpl implements ChatService{
             throw new BusinessException(ChatErrorCode.CHAT_FORBIDDEN);
         }
 
+        // 삭제할 채팅 이미지 key 먼저 조회
+        List<String> keysToDelete = chatImageRepository.findAllByChat(chat).stream()
+                .map(ChatImage::getImageKey)
+                .toList();
+
+        // 채팅 삭제
         chatRepository.delete(chat);
+
+        // DB 커밋 성공 후 S3 이미지 삭제
+        if (!keysToDelete.isEmpty()) {
+            eventPublisher.publishEvent(new S3ImageDeleteEvent(keysToDelete));
+        }
 
         messagingTemplate.convertAndSend(
                 "/topic/rooms/" + roomId + "/updates",

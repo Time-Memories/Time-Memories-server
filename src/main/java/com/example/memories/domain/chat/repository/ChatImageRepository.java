@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface ChatImageRepository extends JpaRepository<ChatImage, Long> {
     List<ChatImage> findByChatInOrderBySortOrderAsc(List<Chat> chats);
+    List<ChatImage> findAllByChat(Chat chat);
 }
