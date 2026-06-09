@@ -9,6 +9,7 @@ import com.example.memories.domain.room.entity.RoomUser;
 import com.example.memories.domain.room.entity.enums.RoomRole;
 import com.example.memories.domain.room.entity.enums.RoomType;
 import com.example.memories.domain.room.exception.RoomErrorCode;
+import com.example.memories.domain.comment.repository.CommentRepository;
 import com.example.memories.domain.diary.entity.Diary;
 import com.example.memories.domain.diary.repository.DiaryRepository;
 import com.example.memories.domain.room.repository.RoomRepository;
@@ -31,6 +32,7 @@ public class RoomServiceImpl implements RoomService {
     private static final int ROOM_CODE_LENGTH = 6;
 
     private final DiaryRepository diaryRepository;
+    private final CommentRepository commentRepository;
     private final RoomRepository roomRepository;
     private final RoomUserRepository roomUserRepository;
 
@@ -154,6 +156,9 @@ public class RoomServiceImpl implements RoomService {
         // 방에 속한 RoomUser 먼저 삭제
         roomUserRepository.deleteAllByRoom(room);
 
+        // 방에 속한 일기의 댓글 삭제 (일기보다 먼저 삭제해야 FK 제약 위반 없음)
+        commentRepository.deleteAllByRoom(room);
+
         // 방에 속한 일기 삭제 (DiaryImage는 Diary의 cascade로 함께 삭제됨)
         List<Diary> diaries = diaryRepository.findAllByRoom(room);
         diaryRepository.deleteAll(diaries);
@@ -201,7 +206,23 @@ public class RoomServiceImpl implements RoomService {
         RoomUser roomUser = roomUserRepository.findByRoomAndUser(room, user)
                 .orElseThrow(() -> new BusinessException(RoomErrorCode.ROOM_FORBIDDEN));
 
-        // 일반 멤버는 바로 나가기
+        leaveRoomInternal(room, roomUser);
+    }
+
+    @Transactional
+    @Override
+    public void leaveAllRooms(User user) {
+        // 회원 탈퇴 시 가입한 모든 방에서 퇴장 처리
+        // (방장이면 위임, 마지막 멤버면 방+일기+댓글 삭제, 일반 멤버면 RoomUser만 제거하고 작성 콘텐츠는 유지)
+        List<RoomUser> roomUsers = roomUserRepository.findAllByUserWithRoom(user);
+        for (RoomUser roomUser : roomUsers) {
+            leaveRoomInternal(roomUser.getRoom(), roomUser);
+        }
+    }
+
+    // 한 방에서의 퇴장 처리 (leaveRoom/leaveAllRooms 공통 로직)
+    private void leaveRoomInternal(Room room, RoomUser roomUser) {
+        // 일반 멤버는 바로 나가기 (작성한 일기/댓글은 방에 그대로 유지)
         if (!roomUser.isOwner()) {
             roomUserRepository.delete(roomUser);
             return;
@@ -215,6 +236,8 @@ public class RoomServiceImpl implements RoomService {
         // 방장이 혼자 남은 경우 방 삭제
         if (nextOwner == null) {
             roomUserRepository.delete(roomUser);
+            // 방에 속한 일기의 댓글 삭제 (일기보다 먼저 삭제해야 FK 제약 위반 없음)
+            commentRepository.deleteAllByRoom(room);
             // 방에 속한 일기 삭제 (DiaryImage는 Diary의 cascade로 함께 삭제됨)
             List<Diary> diaries = diaryRepository.findAllByRoom(room);
             diaryRepository.deleteAll(diaries);
@@ -223,7 +246,6 @@ public class RoomServiceImpl implements RoomService {
         }
 
         // 다른 멤버가 있으면 방장 위임 후 기존 방장 삭제
-        // RoomUser 삭제
         nextOwner.changeRole(RoomRole.OWNER);
         roomUserRepository.delete(roomUser);
     }

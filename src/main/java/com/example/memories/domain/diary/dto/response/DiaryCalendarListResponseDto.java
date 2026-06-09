@@ -3,6 +3,7 @@ package com.example.memories.domain.diary.dto.response;
 import com.example.memories.domain.diary.entity.Diary;
 import com.example.memories.domain.room.entity.Room;
 import com.example.memories.domain.room.entity.enums.RoomType;
+import com.example.memories.domain.user.entity.User;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,10 +26,12 @@ public record DiaryCalendarListResponseDto(
             RoomSummary room
     ) {
         public static DiaryItem from(Diary diary) {
+            // 작성자가 탈퇴한 경우(user == null) 익명 표시
+            User author = diary.getUser();
             return new DiaryItem(
                     diary.getId(),
-                    diary.getUser().getId(),
-                    diary.getUser().getName(),
+                    author != null ? author.getId() : null,
+                    author != null ? author.getName() : User.WITHDRAWN_NAME,
                     diary.getTitle(),
                     diary.getDiaryDate(),
                     RoomSummary.from(diary.getRoom())

@@ -26,6 +26,10 @@ public interface RoomUserRepository extends JpaRepository<RoomUser, Long> {
 
     void deleteAllByRoom(Room room);
 
+    // 회원 탈퇴 시 사용자가 가입한 모든 방을 처리하기 위해 Room과 함께 조회
+    @Query("SELECT ru FROM RoomUser ru JOIN FETCH ru.room WHERE ru.user = :user")
+    List<RoomUser> findAllByUserWithRoom(@Param("user") User user);
+
     // 특정 방의 멤버 목록 조회: 입장 순 ASC
     @Query("""
             SELECT ru

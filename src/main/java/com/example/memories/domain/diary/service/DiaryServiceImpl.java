@@ -10,6 +10,7 @@ import com.example.memories.domain.diary.dto.response.DiaryUpdateResponseDto;
 import com.example.memories.domain.diary.entity.Diary;
 import com.example.memories.domain.diary.entity.DiaryImage;
 import com.example.memories.domain.diary.exception.DiaryErrorCode;
+import com.example.memories.domain.comment.repository.CommentRepository;
 import com.example.memories.domain.diary.repository.DiaryImageRepository;
 import com.example.memories.domain.diary.repository.DiaryRepository;
 import com.example.memories.domain.room.entity.Room;
@@ -43,6 +44,7 @@ public class DiaryServiceImpl implements DiaryService {
 
     private final DiaryRepository diaryRepository;
     private final DiaryImageRepository diaryImageRepository;
+    private final CommentRepository commentRepository;
     private final RoomRepository roomRepository;
     private final RoomUserRepository roomUserRepository;
     private final S3PresignService s3PresignService;
@@ -203,6 +205,9 @@ public class DiaryServiceImpl implements DiaryService {
         if (!keysToDelete.isEmpty()) {
             eventPublisher.publishEvent(new S3ImageDeleteEvent(keysToDelete));
         }
+
+        // 일기에 달린 댓글도 함께 삭제
+        commentRepository.deleteAllByDiary(diary);
 
         diaryRepository.delete(diary);
     }

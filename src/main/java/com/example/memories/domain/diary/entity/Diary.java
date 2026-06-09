@@ -5,6 +5,8 @@ import com.example.memories.domain.user.entity.User;
 import com.example.memories.global.common.entity.AuditingEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -20,8 +22,12 @@ public class Diary extends AuditingEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // 작성자가 탈퇴(soft delete)하면 @SQLRestriction으로 조회에서 제외되는데,
+    // @NotFound(IGNORE)가 없으면 Hibernate가 FetchNotFoundException을 던진다.
+    // IGNORE로 두어 탈퇴 작성자는 user=null로 로딩되고 일기 자체는 유지된다.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -37,6 +37,7 @@ import static org.mockito.BDDMockito.*;
 class RoomServiceImplTest {
 
     @Mock DiaryRepository diaryRepository;
+    @Mock com.example.memories.domain.comment.repository.CommentRepository commentRepository;
     @Mock RoomRepository roomRepository;
     @Mock RoomUserRepository roomUserRepository;
 
@@ -198,6 +199,7 @@ class RoomServiceImplTest {
 
         // then
         then(roomUserRepository).should().deleteAllByRoom(room);
+        then(commentRepository).should().deleteAllByRoom(room);
         then(diaryRepository).should().deleteAll(List.of());
         then(roomRepository).should().delete(room);
     }
@@ -301,8 +303,67 @@ class RoomServiceImplTest {
 
         // then
         then(roomUserRepository).should().delete(ownerRoomUser);
+        then(commentRepository).should().deleteAllByRoom(room);
         then(diaryRepository).should().deleteAll(List.of());
         then(roomRepository).should().delete(room);
+    }
+
+    @Test
+    @DisplayName("회원 탈퇴 시 가입한 모든 방을 퇴장 처리한다 - 일반 멤버 방은 RoomUser만 삭제(콘텐츠 유지), 혼자 남은 방장 방은 방 삭제")
+    void leaveAllRooms_success() {
+        // given
+        User user = createUser(1L);
+
+        // 다른 멤버가 있는 방의 일반 멤버 → RoomUser만 삭제
+        Room memberRoom = createRoom(1L, "멤버로 있는 방", RoomType.GROUP);
+        RoomUser memberRoomUser = createRoomUser(10L, memberRoom, user, RoomRole.MEMBER);
+
+        // 혼자 남은 방장 방 → 방 삭제
+        Room ownerRoom = createRoom(2L, "혼자 있는 방", RoomType.GROUP);
+        RoomUser ownerRoomUser = createRoomUser(20L, ownerRoom, user, RoomRole.OWNER);
+
+        given(roomUserRepository.findAllByUserWithRoom(user))
+                .willReturn(List.of(memberRoomUser, ownerRoomUser));
+        given(roomUserRepository.findFirstByRoomAndRoleOrderByIdAsc(ownerRoom, RoomRole.MEMBER))
+                .willReturn(Optional.empty());
+        given(diaryRepository.findAllByRoom(ownerRoom)).willReturn(List.of());
+
+        // when
+        roomService.leaveAllRooms(user);
+
+        // then
+        then(roomUserRepository).should().delete(memberRoomUser);
+        then(roomUserRepository).should().delete(ownerRoomUser);
+        // 혼자 남은 방만 방+댓글+일기 삭제, 멤버로 있던 방은 콘텐츠 유지
+        then(commentRepository).should().deleteAllByRoom(ownerRoom);
+        then(roomRepository).should().delete(ownerRoom);
+        then(commentRepository).should(never()).deleteAllByRoom(memberRoom);
+        then(roomRepository).should(never()).delete(memberRoom);
+    }
+
+    @Test
+    @DisplayName("회원 탈퇴 시 방장으로 있고 다른 멤버가 있는 방은 방장을 위임하고 RoomUser만 삭제한다")
+    void leaveAllRooms_transferOwnership() {
+        // given
+        User user = createUser(1L);
+        User member = createUser(2L);
+        Room room = createRoom(1L, "방", RoomType.GROUP);
+        RoomUser ownerRoomUser = createRoomUser(10L, room, user, RoomRole.OWNER);
+        RoomUser memberRoomUser = createRoomUser(11L, room, member, RoomRole.MEMBER);
+
+        given(roomUserRepository.findAllByUserWithRoom(user))
+                .willReturn(List.of(ownerRoomUser));
+        given(roomUserRepository.findFirstByRoomAndRoleOrderByIdAsc(room, RoomRole.MEMBER))
+                .willReturn(Optional.of(memberRoomUser));
+
+        // when
+        roomService.leaveAllRooms(user);
+
+        // then
+        assertThat(memberRoomUser.getRole()).isEqualTo(RoomRole.OWNER);
+        then(roomUserRepository).should().delete(ownerRoomUser);
+        then(roomRepository).should(never()).delete(room);
+        then(commentRepository).should(never()).deleteAllByRoom(room);
     }
 
     @Test

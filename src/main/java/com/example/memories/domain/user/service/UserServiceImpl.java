@@ -1,6 +1,7 @@
 package com.example.memories.domain.user.service;
 
 import com.example.memories.domain.auth.repository.RefreshTokenRepository;
+import com.example.memories.domain.room.service.RoomService;
 import com.example.memories.domain.user.dto.request.UpdateUserRequestDto;
 import com.example.memories.domain.user.dto.response.UpdateUserResponseDto;
 import com.example.memories.domain.user.dto.response.UserProfileResponseDto;
@@ -20,6 +21,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RoomService roomService;
 
     @Override
     public User findById(Long userId) {
@@ -61,6 +63,11 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
+        // 가입한 모든 방에서 퇴장 (방장이면 위임, 마지막 멤버면 방+일기+댓글 삭제)
+        // 다른 멤버가 남은 방에 작성한 일기/댓글은 유지되며, 작성자는 "탈퇴한 사용자"로 표시됨
+        roomService.leaveAllRooms(user);
+
         userRepository.delete(user);
         refreshTokenRepository.delete(userId);
     }
