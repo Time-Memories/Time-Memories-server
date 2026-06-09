@@ -8,6 +8,8 @@ import com.example.memories.domain.chat.dto.response.ChatResponseDto;
 import com.example.memories.domain.chat.dto.response.MessageDeletedResponseDto;
 import com.example.memories.domain.chat.entity.Chat;
 import com.example.memories.domain.chat.entity.ChatImage;
+import com.example.memories.domain.chat.event.ChatCreatedEvent;
+import com.example.memories.domain.chat.event.ChatDeletedEvent;
 import com.example.memories.domain.chat.exception.ChatErrorCode;
 import com.example.memories.domain.chat.repository.ChatImageRepository;
 import com.example.memories.domain.chat.repository.ChatRepository;
@@ -19,6 +21,7 @@ import com.example.memories.domain.room.repository.RoomUserRepository;
 import com.example.memories.domain.user.entity.AuthProvider;
 import com.example.memories.domain.user.entity.User;
 import com.example.memories.global.exception.BusinessException;
+import com.example.memories.infra.s3.S3ImageDeleteEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
@@ -45,7 +49,7 @@ class ChatServiceImplTest {
     @Mock private ChatImageRepository chatImageRepository;
     @Mock private RoomRepository roomRepository;
     @Mock private RoomUserRepository roomUserRepository;
-    @Mock private SimpMessagingTemplate messagingTemplate;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private ChatServiceImpl chatService;
 
@@ -128,10 +132,7 @@ class ChatServiceImplTest {
             assertThat(response.imageKeys()).isEmpty();
 
             verify(chatRepository).save(any(Chat.class));
-            verify(messagingTemplate).convertAndSend(
-                    eq("/topic/rooms/" + roomId),
-                    any(ChatResponseDto.class)
-            );
+            verify(eventPublisher).publishEvent(any(ChatCreatedEvent.class));
         }
 
         @Test
@@ -207,10 +208,7 @@ class ChatServiceImplTest {
                         && list.get(2).getSortOrder().equals(3);
             }));
 
-            verify(messagingTemplate).convertAndSend(
-                    eq("/topic/rooms/" + roomId),
-                    any(ChatResponseDto.class)
-            );
+            verify(eventPublisher).publishEvent(any(ChatCreatedEvent.class));
         }
     }
 
@@ -305,16 +303,50 @@ class ChatServiceImplTest {
             given(roomRepository.findById(roomId)).willReturn(Optional.of(room));
             given(roomUserRepository.existsByRoomAndUser(room, user1)).willReturn(true);
             given(chatRepository.findByIdAndRoom(chatId, room)).willReturn(Optional.of(chat));
+            given(chatImageRepository.findAllByChat(chat)).willReturn(List.of());
 
             // when
             chatService.deleteChat(roomId, chatId, user1);
 
             // then
             verify(chatRepository).delete(chat);
-            verify(messagingTemplate).convertAndSend(
-                    eq("/topic/rooms/" + roomId + "/updates"),
-                    any(MessageDeletedResponseDto.class)
-            );
+            verify(eventPublisher).publishEvent(any(ChatDeletedEvent.class));
+            verify(eventPublisher, never()).publishEvent(any(S3ImageDeleteEvent.class));
+        }
+
+        @Test
+        @DisplayName("이미지 채팅 삭제 시 S3 이미지 삭제 이벤트를 발행한다")
+        void deleteChat_imageChat_publishS3DeleteEvent() {
+            // given
+            Long roomId = 1L;
+            Long chatId = 1L;
+
+            Chat chat = Chat.builder()
+                    .room(room)
+                    .user(user1)
+                    .content(null)
+                    .build();
+            setId(chat, chatId);
+
+            ChatImage chatImage = ChatImage.builder()
+                    .chat(chat)
+                    .imageKey("chat/1.jpg")
+                    .sortOrder(1)
+                    .build();
+            setId(chatImage, 1L);
+
+            given(roomRepository.findById(roomId)).willReturn(Optional.of(room));
+            given(roomUserRepository.existsByRoomAndUser(room, user1)).willReturn(true);
+            given(chatRepository.findByIdAndRoom(chatId, room)).willReturn(Optional.of(chat));
+            given(chatImageRepository.findAllByChat(chat)).willReturn(List.of(chatImage));
+
+            // when
+            chatService.deleteChat(roomId, chatId, user1);
+
+            // then
+            verify(chatRepository).delete(chat);
+            verify(eventPublisher).publishEvent(any(S3ImageDeleteEvent.class));
+            verify(eventPublisher).publishEvent(any(ChatDeletedEvent.class));
         }
 
         @Test
