@@ -139,19 +139,18 @@
         accessToken = document.getElementById("token").value;
         currentRoomId = document.getElementById("roomId").value;
 
-        if (!accessToken) {
-            alert("토큰을 입력하세요.");
-            return;
-        }
-
         const socket = new SockJS("http://localhost:8080/ws");
 
         stompClient = Stomp.over(socket);
 
+        const headers = {};
+
+        if (accessToken) {
+            headers.Authorization = "Bearer " + accessToken;
+        }
+
         stompClient.connect(
-            {
-                Authorization: "Bearer " + accessToken
-            },
+            headers,
 
             function () {
 

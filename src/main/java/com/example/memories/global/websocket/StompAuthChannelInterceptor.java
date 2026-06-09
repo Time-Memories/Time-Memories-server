@@ -1,6 +1,8 @@
 package com.example.memories.global.websocket;
 
 import com.example.memories.domain.auth.exception.AuthErrorCode;
+import com.example.memories.domain.room.exception.RoomErrorCode;
+import com.example.memories.domain.room.repository.RoomUserRepository;
 import com.example.memories.global.exception.BusinessException;
 import com.example.memories.global.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +25,10 @@ import java.util.List;
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtProvider jwtProvider;
+    private final RoomUserRepository roomUserRepository;
 
     @Override
-    public Message<?>preSend(Message<?> message, MessageChannel channel) {
+    public Message<?> preSend(Message<?> message, MessageChannel channel) {
         // STOMP 메시지의 헤더 정보 접근 객체
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
@@ -42,6 +45,11 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
         // CONNECT 시 저장한 인증 정보를 이후 SEND, SUBSCRIBE 요청에서도 사용
         if (accessor.getUser() instanceof UsernamePasswordAuthenticationToken authentication) {
+
+            // SUBSCRIBE 요청 시 방 토픽 구독 권한 검증
+            if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+                validateRoomSubscription(accessor, authentication);
+            }
 
             // 현재 메시지 처리 스레드의 SecurityContext에 인증 정보 저장
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -102,5 +110,46 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         accessor.setUser(authentication);
 
         log.info("WebSocket 연결 인증 성공 - 사용자: {}", userId);
+    }
+
+    /**
+     * SUBSCRIBE 요청 시 해당 방의 멤버만 방 토픽을 구독할 수 있도록 검증
+     */
+    private void validateRoomSubscription(
+            StompHeaderAccessor accessor,
+            UsernamePasswordAuthenticationToken authentication
+    ) {
+        String destination = accessor.getDestination();
+
+        if (destination == null) {
+            return;
+        }
+
+        // 방 메시지/업데이트 토픽만 검증
+        if (!destination.startsWith("/topic/rooms/")) {
+            return;
+        }
+
+        Long userId = (Long) authentication.getPrincipal();
+        Long roomId = extractRoomIdFromDestination(destination);
+        if (!roomUserRepository.existsByRoomIdAndUserId(roomId, userId)) {
+            log.warn("WebSocket 구독 권한 없음 - userId={}, roomId={}, destination={}",
+                    userId, roomId, destination);
+            throw new BusinessException(RoomErrorCode.ROOM_FORBIDDEN);
+        }
+    }
+
+    /**
+     * /topic/rooms/{roomId}, /topic/rooms/{roomId}/updates 에서 roomId 추출
+     */
+    private Long extractRoomIdFromDestination(String destination) {
+        try {
+            String path = destination.substring("/topic/rooms/".length());
+            String roomId = path.split("/")[0];
+
+            return Long.parseLong(roomId);
+        } catch (RuntimeException e) {
+            throw new BusinessException(RoomErrorCode.ROOM_FORBIDDEN);
+        }
     }
 }
