@@ -36,6 +36,18 @@ class KakaoOAuthClientTest {
     }
 
     @Test
+    @DisplayName("authorize URL에 client_id, redirect_uri, state가 포함된다")
+    void getAuthorizationUri_containsParams() {
+        String uri = kakaoOAuthClient.getAuthorizationUri("kakao:nonce-1");
+
+        assertThat(uri).startsWith("https://kauth.kakao.com/oauth/authorize");
+        assertThat(uri).contains("client_id=kakao-client-id");
+        assertThat(uri).contains("response_type=code");
+        assertThat(uri).contains("state=kakao:nonce-1");
+        assertThat(uri).contains("redirect_uri=https://app.example.com/callback");
+    }
+
+    @Test
     @DisplayName("인가 코드를 access token으로 교환한다")
     void getAccessToken_success() {
         String responseJson = """

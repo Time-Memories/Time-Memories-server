@@ -36,6 +36,18 @@ class GoogleOAuthClientTest {
     }
 
     @Test
+    @DisplayName("authorize URL에 client_id, redirect_uri, scope, state가 포함된다")
+    void getAuthorizationUri_containsParams() {
+        String uri = googleOAuthClient.getAuthorizationUri("google:nonce-1");
+
+        assertThat(uri).startsWith("https://accounts.google.com/o/oauth2/v2/auth");
+        assertThat(uri).contains("client_id=google-client-id");
+        assertThat(uri).contains("response_type=code");
+        assertThat(uri).contains("scope=email%20profile");
+        assertThat(uri).contains("state=google:nonce-1");
+    }
+
+    @Test
     @DisplayName("인가 코드를 access token으로 교환한다")
     void getAccessToken_success() {
         String responseJson = """
