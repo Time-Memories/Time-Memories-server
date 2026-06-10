@@ -34,9 +34,10 @@ public class AuthServiceImpl implements AuthService {
     private long refreshTokenExpiry;
 
     @Override
-    public LoginResponseDto login(AuthProvider provider, String token) {
+    public LoginResponseDto login(AuthProvider provider, String authorizationCode) {
         OAuthClient client = oAuthClientComposite.getClient(provider);
-        OAuthUserInfo userInfo = client.getUserInfo(token);
+        String providerAccessToken = client.getAccessToken(authorizationCode);
+        OAuthUserInfo userInfo = client.getUserInfo(providerAccessToken);
 
         User user = userService.findOrRegisterOAuthUser(
                 userInfo.provider(), userInfo.providerId(), userInfo.name(), userInfo.email());
