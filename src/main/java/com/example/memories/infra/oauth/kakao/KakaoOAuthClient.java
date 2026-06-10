@@ -14,10 +14,12 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class KakaoOAuthClient implements OAuthClient {
 
+    private static final String AUTHORIZE_URI = "https://kauth.kakao.com/oauth/authorize";
     private static final String TOKEN_URI = "https://kauth.kakao.com/oauth/token";
     private static final String USER_INFO_URI = "https://kapi.kakao.com/v2/user/me";
 
@@ -35,6 +37,18 @@ public class KakaoOAuthClient implements OAuthClient {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
+    }
+
+    @Override
+    public String getAuthorizationUri(String state) {
+        return UriComponentsBuilder.fromUriString(AUTHORIZE_URI)
+                .queryParam("client_id", clientId)
+                .queryParam("redirect_uri", redirectUri)
+                .queryParam("response_type", "code")
+                .queryParam("state", state)
+                .build()
+                .encode()
+                .toUriString();
     }
 
     @Override

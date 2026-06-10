@@ -14,10 +14,12 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class GoogleOAuthClient implements OAuthClient {
 
+    private static final String AUTHORIZE_URI = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String TOKEN_URI = "https://oauth2.googleapis.com/token";
     private static final String USER_INFO_URI = "https://www.googleapis.com/oauth2/v3/userinfo";
 
@@ -35,6 +37,19 @@ public class GoogleOAuthClient implements OAuthClient {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
+    }
+
+    @Override
+    public String getAuthorizationUri(String state) {
+        return UriComponentsBuilder.fromUriString(AUTHORIZE_URI)
+                .queryParam("client_id", clientId)
+                .queryParam("redirect_uri", redirectUri)
+                .queryParam("response_type", "code")
+                .queryParam("scope", "email profile")
+                .queryParam("state", state)
+                .build()
+                .encode()
+                .toUriString();
     }
 
     @Override
