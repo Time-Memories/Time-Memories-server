@@ -1,6 +1,6 @@
-package com.example.memories.domain.room.entity;
+package com.example.memories.domain.chat.entity;
 
-import com.example.memories.domain.room.entity.enums.RoomRole;
+import com.example.memories.domain.room.entity.Room;
 import com.example.memories.domain.user.entity.User;
 import com.example.memories.global.common.entity.CreatedAtEntity;
 import jakarta.persistence.*;
@@ -12,18 +12,10 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
-@Table(
-        name = "room_user",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_room_user",
-                        columnNames = {"room_id", "user_id"}
-                )
-        }
-)
-@Getter
+@Table(name = "chat")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class RoomUser extends CreatedAtEntity {
+@Getter
+public class Chat extends CreatedAtEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,25 +27,24 @@ public class RoomUser extends CreatedAtEntity {
     private Room room;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private RoomRole role;
+    @Column(columnDefinition = "TEXT")
+    private String content;
 
     @Builder
-    public RoomUser(Room room, User user, RoomRole role) {
+    public Chat(Room room, User user, String content) {
         this.room = room;
         this.user = user;
-        this.role = role;
+        this.content = content;
     }
 
-    public boolean isOwner() {
-        return this.role == RoomRole.OWNER;
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
     }
 
-    public void changeRole(RoomRole role) {
-        this.role = role;
+    public String getUserName() {
+        return user != null ? user.getName() : "탈퇴한 사용자";
     }
 }
