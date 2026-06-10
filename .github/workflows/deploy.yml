@@ -72,6 +72,13 @@ jobs:
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+          FRONTEND_REDIRECT_URI: ${{ secrets.FRONTEND_REDIRECT_URI }}
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
@@ -91,6 +98,13 @@ jobs:
             AWS_ACCESS_KEY="${AWS_ACCESS_KEY}" \
             AWS_SECRET_KEY="${AWS_SECRET_KEY}" \
             JWT_SECRET="${JWT_SECRET}" \
+            KAKAO_CLIENT_ID="${KAKAO_CLIENT_ID}" \
+            KAKAO_CLIENT_SECRET="${KAKAO_CLIENT_SECRET}" \
+            KAKAO_REDIRECT_URI="${KAKAO_REDIRECT_URI}" \
+            GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
+            GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}" \
+            GOOGLE_REDIRECT_URI="${GOOGLE_REDIRECT_URI}" \
+            FRONTEND_REDIRECT_URI="${FRONTEND_REDIRECT_URI}" \
             bash << 'EOF'
             set -e  # 에러 발생 시 즉시 중단
           
@@ -120,6 +134,13 @@ jobs:
               -e AWS_ACCESS_KEY="${AWS_ACCESS_KEY}" \
               -e AWS_SECRET_KEY="${AWS_SECRET_KEY}" \
               -e JWT_SECRET="${JWT_SECRET}" \
+              -e KAKAO_CLIENT_ID="${KAKAO_CLIENT_ID}" \
+              -e KAKAO_CLIENT_SECRET="${KAKAO_CLIENT_SECRET}" \
+              -e KAKAO_REDIRECT_URI="${KAKAO_REDIRECT_URI}" \
+              -e GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
+              -e GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}" \
+              -e GOOGLE_REDIRECT_URI="${GOOGLE_REDIRECT_URI}" \
+              -e FRONTEND_REDIRECT_URI="${FRONTEND_REDIRECT_URI}" \
               memories-be:${IMAGE_TAG}
           
             echo "✅ 컨테이너 시작됨 (ID: $(docker ps -q -f name=memories-be))"
