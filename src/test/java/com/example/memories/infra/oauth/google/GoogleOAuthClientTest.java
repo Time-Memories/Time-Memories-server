@@ -7,8 +7,11 @@ import com.example.memories.infra.oauth.OAuthUserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.*;
@@ -24,7 +27,56 @@ class GoogleOAuthClientTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        googleOAuthClient = new GoogleOAuthClient(builder);
+        googleOAuthClient = new GoogleOAuthClient(
+                builder,
+                "google-client-id",
+                "google-client-secret",
+                "https://app.example.com/callback"
+        );
+    }
+
+    @Test
+    @DisplayName("인가 코드를 access token으로 교환한다")
+    void getAccessToken_success() {
+        String responseJson = """
+                {
+                    "access_token": "google-access-token",
+                    "token_type": "Bearer"
+                }
+                """;
+        server.expect(requestTo("https://oauth2.googleapis.com/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().formData(formWith(
+                        "grant_type", "authorization_code",
+                        "client_id", "google-client-id",
+                        "client_secret", "google-client-secret",
+                        "redirect_uri", "https://app.example.com/callback",
+                        "code", "auth-code")))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        String accessToken = googleOAuthClient.getAccessToken("auth-code");
+
+        assertThat(accessToken).isEqualTo("google-access-token");
+    }
+
+    @Test
+    @DisplayName("토큰 교환 실패 시 OAUTH_COMMUNICATION_ERROR 예외 발생")
+    void getAccessToken_serverError_throwsOAuthCommunicationError() {
+        server.expect(requestTo("https://oauth2.googleapis.com/token"))
+                .andRespond(withServerError());
+
+        assertThatThrownBy(() -> googleOAuthClient.getAccessToken("bad-code"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(AuthErrorCode.OAUTH_COMMUNICATION_ERROR));
+    }
+
+    private static MultiValueMap<String, String> formWith(String... keyValues) {
+        LinkedMultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        for (int i = 0; i < keyValues.length; i += 2) {
+            form.add(keyValues[i], keyValues[i + 1]);
+        }
+        return form;
     }
 
     @Test

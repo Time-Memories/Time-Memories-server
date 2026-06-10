@@ -53,12 +53,13 @@ class AuthServiceImplTest {
         OAuthUserInfo userInfo = new OAuthUserInfo("google-id", "test@example.com", "Test User", AuthProvider.GOOGLE);
 
         given(oAuthClientComposite.getClient(AuthProvider.GOOGLE)).willReturn(oAuthClient);
+        given(oAuthClient.getAccessToken("auth-code")).willReturn("social-token");
         given(oAuthClient.getUserInfo("social-token")).willReturn(userInfo);
         given(userService.findOrRegisterOAuthUser(AuthProvider.GOOGLE, "google-id", "Test User", "test@example.com")).willReturn(user);
         given(jwtProvider.generateAccessToken(1L)).willReturn("access-token");
         given(jwtProvider.generateRefreshToken(1L)).willReturn("refresh-token");
 
-        LoginResponseDto result = authService.login(AuthProvider.GOOGLE, "social-token");
+        LoginResponseDto result = authService.login(AuthProvider.GOOGLE, "auth-code");
 
         assertThat(result.userId()).isEqualTo(1L);
         assertThat(result.accessToken()).isEqualTo("access-token");

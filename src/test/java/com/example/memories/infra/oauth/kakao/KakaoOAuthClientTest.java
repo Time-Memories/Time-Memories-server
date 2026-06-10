@@ -7,8 +7,11 @@ import com.example.memories.infra.oauth.OAuthUserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.*;
@@ -24,7 +27,56 @@ class KakaoOAuthClientTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        kakaoOAuthClient = new KakaoOAuthClient(builder);
+        kakaoOAuthClient = new KakaoOAuthClient(
+                builder,
+                "kakao-client-id",
+                "kakao-client-secret",
+                "https://app.example.com/callback"
+        );
+    }
+
+    @Test
+    @DisplayName("인가 코드를 access token으로 교환한다")
+    void getAccessToken_success() {
+        String responseJson = """
+                {
+                    "access_token": "kakao-access-token",
+                    "token_type": "bearer"
+                }
+                """;
+        server.expect(requestTo("https://kauth.kakao.com/oauth/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().formData(formWith(
+                        "grant_type", "authorization_code",
+                        "client_id", "kakao-client-id",
+                        "redirect_uri", "https://app.example.com/callback",
+                        "code", "auth-code",
+                        "client_secret", "kakao-client-secret")))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        String accessToken = kakaoOAuthClient.getAccessToken("auth-code");
+
+        assertThat(accessToken).isEqualTo("kakao-access-token");
+    }
+
+    @Test
+    @DisplayName("토큰 교환 실패 시 OAUTH_COMMUNICATION_ERROR 예외 발생")
+    void getAccessToken_serverError_throwsOAuthCommunicationError() {
+        server.expect(requestTo("https://kauth.kakao.com/oauth/token"))
+                .andRespond(withServerError());
+
+        assertThatThrownBy(() -> kakaoOAuthClient.getAccessToken("bad-code"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(AuthErrorCode.OAUTH_COMMUNICATION_ERROR));
+    }
+
+    private static MultiValueMap<String, String> formWith(String... keyValues) {
+        LinkedMultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        for (int i = 0; i < keyValues.length; i += 2) {
+            form.add(keyValues[i], keyValues[i + 1]);
+        }
+        return form;
     }
 
     @Test
