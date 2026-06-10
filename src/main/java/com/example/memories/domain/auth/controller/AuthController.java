@@ -22,12 +22,16 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Operation(summary = "소셜 로그인/회원가입", description = "카카오 또는 구글 Access Token으로 로그인합니다. 최초 로그인 시 자동 회원가입됩니다.")
+    @Operation(
+            summary = "소셜 로그인/회원가입",
+            description = "카카오 또는 구글 인가 코드(authorization code)로 로그인합니다. 서버가 코드를 토큰으로 교환하여 사용자 정보를 조회하며, 최초 로그인 시 자동 회원가입됩니다."
+    )
     @PostMapping("/login/{provider}")
     public ResponseEntity<LoginResponseDto> login(
             @PathVariable AuthProvider provider,
             @RequestBody @Valid SocialLoginRequestDto request) {
-        return ResponseEntity.ok(authService.login(provider, request.token()));
+
+        return ResponseEntity.ok(authService.login(provider, request.code()));
     }
 
     @Operation(summary = "토큰 재발급", description = "Refresh Token으로 새로운 Access/Refresh Token을 발급받습니다.")

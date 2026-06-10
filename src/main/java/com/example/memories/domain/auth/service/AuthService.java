@@ -5,7 +5,7 @@ import com.example.memories.domain.auth.dto.response.TokenResponseDto;
 import com.example.memories.domain.user.entity.AuthProvider;
 
 public interface AuthService {
-    LoginResponseDto login(AuthProvider provider, String token);
+    LoginResponseDto login(AuthProvider provider, String authorizationCode);
     TokenResponseDto refresh(String refreshTokenValue);
     void logout(Long userId);
 }
