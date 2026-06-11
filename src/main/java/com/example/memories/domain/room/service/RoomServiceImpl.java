@@ -235,7 +235,7 @@ public class RoomServiceImpl implements RoomService {
 
         // 방장이 혼자 남은 경우 방 삭제
         if (nextOwner == null) {
-            roomUserRepository.delete(roomUser);
+            roomUserRepository.deleteAllByRoom(room);
             // 방에 속한 일기의 댓글 삭제 (일기보다 먼저 삭제해야 FK 제약 위반 없음)
             commentRepository.deleteAllByRoom(room);
             // 방에 속한 일기 삭제 (DiaryImage는 Diary의 cascade로 함께 삭제됨)
