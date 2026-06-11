@@ -302,7 +302,7 @@ class RoomServiceImplTest {
         roomService.leaveRoom(owner, 1L);
 
         // then
-        then(roomUserRepository).should().delete(ownerRoomUser);
+        then(roomUserRepository).should().deleteAllByRoom(room);
         then(commentRepository).should().deleteAllByRoom(room);
         then(diaryRepository).should().deleteAll(List.of());
         then(roomRepository).should().delete(room);
@@ -333,7 +333,7 @@ class RoomServiceImplTest {
 
         // then
         then(roomUserRepository).should().delete(memberRoomUser);
-        then(roomUserRepository).should().delete(ownerRoomUser);
+        then(roomUserRepository).should().deleteAllByRoom(ownerRoom);
         // 혼자 남은 방만 방+댓글+일기 삭제, 멤버로 있던 방은 콘텐츠 유지
         then(commentRepository).should().deleteAllByRoom(ownerRoom);
         then(roomRepository).should().delete(ownerRoom);
