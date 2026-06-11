@@ -1,6 +1,7 @@
 package com.example.memories.global.config;
 
 import com.example.memories.global.security.WebSocketCurrentUserArgumentResolver;
+import com.example.memories.global.websocket.JwtCookieHandshakeInterceptor;
 import com.example.memories.global.websocket.StompAuthChannelInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -17,8 +18,10 @@ import java.util.List;
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
     private final StompAuthChannelInterceptor webSocketAuthChannelInterceptor;
     private final WebSocketCurrentUserArgumentResolver webSocketCurrentUserArgumentResolver;
+    private final JwtCookieHandshakeInterceptor jwtCookieHandshakeInterceptor;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
@@ -35,6 +38,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // WebSocket 엔드포인트 등록
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
+                .addInterceptors(jwtCookieHandshakeInterceptor)
                 .withSockJS();
     }
 
