@@ -73,17 +73,21 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     /**
-     * CONNECT 요청의 Authorization 헤더에서 JWT를 추출하여 인증 처리
+     * Handshake 단계에서 저장한 Access Token으로 WebSocket CONNECT 인증 처리
      */
     private void authenticateUser(StompHeaderAccessor accessor) {
-        String authHeader = accessor.getFirstNativeHeader("Authorization");
+        String token = null;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.warn("WebSocket 인증 실패 - Authorization 헤더 없음");
-            throw new BusinessException(AuthErrorCode.AUTHENTICATION_REQUIRED);
+        if (accessor.getSessionAttributes() != null) {
+            token = (String) accessor.getSessionAttributes()
+                    .get(JwtCookieHandshakeInterceptor.ACCESS_TOKEN_ATTRIBUTE);
         }
 
-        String token = authHeader.substring(7);
+        if (token == null || token.isBlank()) {
+            log.warn("WebSocket 인증 실패 - accessToken 쿠키 없음, sessionAttributes={}",
+                    accessor.getSessionAttributes());
+            throw new BusinessException(AuthErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         // Access Token 검증 및 userId 추출
         Long userId = jwtProvider.extractUserIdFromAccessToken(token);
@@ -119,7 +123,10 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             return;
         }
 
-        Long userId = (Long) authentication.getPrincipal();
+        if (!(authentication.getPrincipal() instanceof Long userId)) {
+            throw new BusinessException(AuthErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         Long roomId = extractRoomIdFromDestination(destination);
         if (!roomUserRepository.existsByRoomIdAndUserId(roomId, userId)) {
             log.warn("WebSocket 구독 권한 없음 - userId={}, roomId={}, destination={}",
