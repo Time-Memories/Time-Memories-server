@@ -50,9 +50,12 @@ public class OAuthController {
             description = "CSRF 방지용 nonce를 생성해 쿠키에 저장하고, 제공자(구글/카카오) 로그인 페이지로 리다이렉트합니다. " +
                     "프론트엔드는 로그인 버튼에서 이 엔드포인트로 이동시키면 됩니다.")
     @GetMapping("/api/oauth/authorize/{provider}")
-    public ResponseEntity<Void> authorize(@PathVariable AuthProvider provider) {
+    public ResponseEntity<Void> authorize(@PathVariable AuthProvider provider,
+                                          @RequestParam(name = "redirect_url", required = false) String redirectUrl) {
+        String resolvedRedirectUri = resolveRedirectUri(redirectUrl);
+
         String nonce = generateNonce();
-        OAuthState state = new OAuthState(provider, nonce);
+        OAuthState state = new OAuthState(provider, nonce, resolvedRedirectUri);
 
         OAuthClient client = oAuthClientComposite.getClient(provider);
         String authorizationUri = client.getAuthorizationUri(state.toParam());
@@ -81,7 +84,7 @@ public class OAuthController {
         LoginResponseDto login = authService.login(parsed.provider(), code);
 
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(frontendRedirectUri))
+                .location(URI.create(parsed.redirectUrl()))
                 .header(HttpHeaders.SET_COOKIE, tokenCookieFactory.accessToken(login.accessToken()).toString())
                 .header(HttpHeaders.SET_COOKIE, tokenCookieFactory.refreshToken(login.refreshToken()).toString())
                 .header(HttpHeaders.SET_COOKIE, expireStateCookie().toString())
@@ -110,5 +113,18 @@ public class OAuthController {
                 .path(STATE_COOKIE_PATH)
                 .maxAge(maxAge)
                 .build();
+    }
+
+    private String resolveRedirectUri(String redirectUrl) {
+        if (redirectUrl == null || redirectUrl.isBlank()) {
+            return frontendRedirectUri;
+        }
+
+        if (redirectUrl.equals(frontendRedirectUri)
+                || redirectUrl.equals("http://localhost:5173/oauth/callback")) {
+            return redirectUrl;
+        }
+
+        throw new BusinessException(AuthErrorCode.INVALID_REDIRECT_URI);
     }
 }
