@@ -31,7 +31,6 @@ public class RoomUser extends CreatedAtEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
     private Room room;
 
     @ManyToOne(fetch = FetchType.LAZY)

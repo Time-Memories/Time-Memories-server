@@ -6,6 +6,7 @@ import com.example.memories.domain.room.entity.enums.RoomRole;
 import com.example.memories.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,7 +25,13 @@ public interface RoomUserRepository extends JpaRepository<RoomUser, Long> {
     // 방장 위임 대상 조회 (가장 먼저 입장한 MEMBER)
     Optional<RoomUser> findFirstByRoomAndRoleOrderByIdAsc(Room room, RoomRole role);
 
-    void deleteAllByRoom(Room room);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            DELETE
+            FROM RoomUser ru
+            WHERE ru.room = :room
+            """)
+    void deleteAllByRoom(@Param("room") Room room);
 
     // 회원 탈퇴 시 사용자가 가입한 모든 방을 처리하기 위해 Room과 함께 조회
     @Query("SELECT ru FROM RoomUser ru JOIN FETCH ru.room WHERE ru.user = :user")
