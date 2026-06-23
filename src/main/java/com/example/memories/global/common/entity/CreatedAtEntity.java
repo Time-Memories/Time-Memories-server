@@ -1,0 +1,22 @@
+package com.example.memories.global.common.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
+
+/**
+ * 생성일만 가지는 추상 클래스
+ */
+@Getter
+@MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
+public class CreatedAtEntity {
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+}

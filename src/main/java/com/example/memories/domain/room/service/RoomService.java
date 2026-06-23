@@ -1,0 +1,19 @@
+package com.example.memories.domain.room.service;
+
+import com.example.memories.domain.room.dto.request.RoomCreateRequest;
+import com.example.memories.domain.room.dto.request.RoomJoinRequest;
+import com.example.memories.domain.room.dto.request.RoomUpdateRequest;
+import com.example.memories.domain.room.dto.response.*;
+import com.example.memories.domain.user.entity.User;
+
+public interface RoomService {
+    RoomCreateResponse createRoom(User user, RoomCreateRequest request);
+    RoomListResponse getRooms(User user, Long cursor, int size);
+    RoomDetailResponse getRoomDetail(User user, Long roomId);
+    RoomUpdateResponse updateRoom(User user, Long roomId, RoomUpdateRequest request);
+    void deleteRoom(User user, Long roomId);
+    RoomJoinResponse joinRoom(User user, RoomJoinRequest request);
+    void leaveRoom(User user, Long roomId);
+    void leaveAllRooms(User user);
+    RoomMemberListResponse getRoomMembers(User user, Long roomId, Long cursor, int size);
+}

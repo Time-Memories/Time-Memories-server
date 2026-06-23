@@ -1,0 +1,25 @@
+networks:
+  memories-net:
+    driver: bridge
+
+services:
+  app:
+    container_name: memories-app-dev
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATA_REDIS_HOST=redis
+    networks:
+      - memories-net
+    depends_on:
+      - redis
+
+  redis:
+    container_name: memories-redis-dev
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - memories-net
